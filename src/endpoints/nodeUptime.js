@@ -6,12 +6,6 @@ const { query } = require("raraph84-lib");
  */
 module.exports.run = async (request, database) => {
 
-    const unit = request.urlParams.unit.toLowerCase();
-    if (unit !== "minutes" && unit !== "day" && unit !== "week" && unit !== "month") {
-        request.end(400, "Invalid unit");
-        return;
-    }
-
     let node;
     try {
         node = (await query(database, "SELECT * FROM Nodes WHERE Node_ID=?", [request.urlParams.nodeId]))[0];
@@ -30,11 +24,11 @@ module.exports.run = async (request, database) => {
 
         const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
         const firstMinute = day * 24 * 60 / 2;
-        const lastMinute = firstMinute + 24 * 60 / 2 - 1;
+        const lastMinute = firstMinute + 24 * 60 / 2;
 
         let statuses;
         try {
-            statuses = await query(database, "SELECT Minute, Online FROM Nodes_Statuses WHERE Node_ID=? && Minute>=? && Minute<=?", [node.Node_ID, firstMinute, lastMinute]);
+            statuses = await query(database, "SELECT Minute, Online FROM Nodes_Statuses WHERE Node_ID=? && Minute>=? && Minute<?", [node.Node_ID, firstMinute, lastMinute]);
         } catch (error) {
             request.end(500, "Internal server error");
             console.log(`SQL Error - ${__filename} - ${error}`);
@@ -50,41 +44,37 @@ module.exports.run = async (request, database) => {
 
         if (totalStatuses.length < 1) return -1;
 
-        let uptime = totalStatuses.reduce((acc, status) => status ? acc + 1 : acc, 0) / totalStatuses.length * 100;
-        uptime = Math.round(uptime * 100) / 100;
+        const uptime = Math.round(totalStatuses.reduce((acc, status) => status ? acc + 1 : acc, 0) / totalStatuses.length * 100 * 100) / 100;
 
         return uptime;
     }
 
-    if (unit === "minutes") {
+    const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
 
-        const minute = Math.floor(Date.now() / 1000 / 60 / 2);
-        const firstMinute = minute - 24 * 60 / 2;
-        const lastMinute = firstMinute + 24 * 60 / 2 - 1;
-
-        let statuses;
-        try {
-            statuses = await query(database, "SELECT Minute, Online FROM Nodes_Statuses WHERE Node_ID=? && Minute>=? && Minute<=?", [node.Node_ID, firstMinute, lastMinute]);
-        } catch (error) {
-            request.end(500, "Internal server error");
-            console.log(`SQL Error - ${__filename} - ${error}`);
-            return;
-        }
-
-        const minutes = [];
-        for (let minute = firstMinute; minute < lastMinute; minute++) {
-            const status = statuses.find((status) => status.Minute === minute);
-            minutes.push({
-                minute: minute,
-                online: status ? (status.Online ? "online" : "offline") : "unknown"
-            });
-        }
-
-        request.end(200, { minutes: minutes });
+    let uptimes;
+    try {
+        uptimes = await query(database, "SELECT Day, Online_Ratio FROM Nodes_Daily_Uptimes WHERE Node_ID=? && Day>=?", [node.Node_ID, day - 30 * 3 + 1]);
+    } catch (error) {
+        request.end(500, "Internal server error");
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        return;
     }
+
+    uptimes.push({ Day: day, Online_Ratio: await todayUptime() });
+
+    const totalUptimes = [];
+    for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
+        const uptime = uptimes.find((uptime) => uptime.Day === currentDay);
+        totalUptimes.push({
+            day: currentDay,
+            onlineRatio: uptime ? uptime.Online_Ratio : -1
+        });
+    }
+
+    request.end(200, { uptimes: totalUptimes });
 }
 
 module.exports.infos = {
-    path: "/nodes/:nodeId/uptime/:unit",
+    path: "/nodes/:nodeId/uptime",
     method: "GET"
 }
