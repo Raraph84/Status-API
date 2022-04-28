@@ -62,16 +62,21 @@ module.exports.run = async (request, database) => {
 
     uptimes.push({ Day: day, Online_Ratio: await todayUptime() });
 
-    const totalUptimes = [];
+    const days = [];
     for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
         const uptime = uptimes.find((uptime) => uptime.Day === currentDay);
-        totalUptimes.push({
+        days.push({
             day: currentDay,
             onlineRatio: uptime ? uptime.Online_Ratio : -1
         });
     }
 
-    request.end(200, { uptimes: totalUptimes });
+    const totalUptime = Math.round(days.reduce((acc, uptime) => uptime.onlineRatio !== -1 ? acc + uptime.onlineRatio : acc, 0) / days.length * 100) / 100;
+
+    request.end(200, {
+        days,
+        totalUptime
+    });
 }
 
 module.exports.infos = {
