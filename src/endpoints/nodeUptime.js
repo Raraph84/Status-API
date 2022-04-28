@@ -71,7 +71,7 @@ module.exports.run = async (request, database) => {
         });
     }
 
-    const totalUptime = Math.round(days.reduce((acc, uptime) => uptime.onlineRatio !== -1 ? acc + uptime.onlineRatio : acc, 0) / days.length * 100) / 100;
+    const totalUptime = Math.round(days.filter((day) => day.onlineRatio !== -1).reduce((acc, uptime) => acc + uptime.onlineRatio, 0) / days.filter((day) => day.onlineRatio !== -1).length * 100) / 100;
 
     request.end(200, {
         days,
