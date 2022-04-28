@@ -1,0 +1,246 @@
+const MySQL = require("mysql");
+const { query } = require("raraph84-lib");
+const { checkWebsite, checkMinecraft, checkApi, checkWs, checkBot, alert } = require("./src/utils");
+const Config = require("./config.json");
+
+const currentDate = Date.now();
+const currentMinute = Math.floor(currentDate / 1000 / 60 / 2);
+
+const database = MySQL.createPool(Config.database);
+database.query("SELECT 0", async (error) => {
+    if (error) console.log("Impossible de se connecter à la base de donnée - " + error);
+    else {
+
+        let nodes;
+        try {
+            nodes = await query(database, "SELECT * FROM Nodes");
+        } catch (error) {
+            console.log(`SQL Error - ${__filename} - ${error}`);
+            return;
+        }
+
+        await Promise.all(nodes.map((node) => checkNode(node)));
+
+        database.end();
+    }
+});
+
+const checkNode = (node) => new Promise((resolve) => {
+
+    const startTime = Date.now();
+
+    if (node.Type === "website") {
+
+        checkWebsite(node.Host).then(async (online) => {
+
+            if (online) await nodeOnline(node, Date.now() - startTime);
+            else await nodeOffline(node);
+
+            resolve();
+        });
+
+    } else if (node.Type === "minecraft") {
+
+        checkMinecraft(node.Host).then(async (online) => {
+
+            if (online) await nodeOnline(node, Date.now() - startTime);
+            else await nodeOffline(node);
+
+            resolve();
+        });
+
+    } else if (node.Type === "api") {
+
+        checkApi(node.Host).then(async (online) => {
+
+            if (online) await nodeOnline(node, Date.now() - startTime);
+            else await nodeOffline(node);
+
+            resolve();
+        });
+
+    } else if (node.Type === "gateway") {
+
+        checkWs(node.Host).then(async (online) => {
+
+            if (online) await nodeOnline(node, Date.now() - startTime);
+            else await nodeOffline(node);
+
+            resolve();
+        });
+
+    } else if (node.Type === "bot") {
+
+        checkBot(node.Host).then(async (online) => {
+
+            if (online) await nodeOnline(node);
+            else await nodeOffline(node);
+
+            resolve();
+
+        }).catch(() => resolve());
+
+    } else resolve();
+});
+
+const getLastStatus = async (node) => {
+
+    let lastStatus;
+    try {
+        lastStatus = (await query(database, "SELECT * FROM Nodes_Events WHERE Node_ID=? ORDER BY Minute DESC LIMIT 1", [node.Node_ID]))[0];
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+    }
+
+    return lastStatus ? !!lastStatus.Online : false;
+}
+
+const nodeOnline = async (node, responseTime) => {
+
+    if (!await getLastStatus(node)) {
+
+        try {
+            await query(database, "INSERT INTO Nodes_Events VALUES (?, ?, 1)", [node.Node_ID, currentMinute]);
+        } catch (error) {
+            console.log(`SQL Error - ${__filename} - ${error}`);
+        }
+
+        alert({
+            title: "Service En Ligne",
+            description: `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`,
+            timestamp: new Date(currentMinute * 1000 * 60 * 2),
+            color: "65280"
+        });
+    }
+
+    try {
+        await query(database, "INSERT INTO Nodes_Statuses VALUES (?, ?, 1)", [node.Node_ID, currentMinute]);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+    }
+
+    if (responseTime) {
+        try {
+            await query(database, "INSERT INTO Nodes_Response_Times VALUES (?, ?, ?)", [node.Node_ID, currentMinute, responseTime]);
+        } catch (error) {
+            console.log(`SQL Error - ${__filename} - ${error}`);
+        }
+    }
+
+    await updateDailyUptime(node);
+    await updateDailyResponseTime(node);
+}
+
+const nodeOffline = async (node) => {
+
+    if (await getLastStatus(node)) {
+
+        try {
+            await query(database, "INSERT INTO Nodes_Events VALUES (?, ?, 0)", [node.Node_ID, currentMinute]);
+        } catch (error) {
+            console.log(`SQL Error - ${__filename} - ${error}`);
+        }
+
+        alert({
+            title: "Service Hors Ligne",
+            description: `:warning: **Le service **\`${node.Name}\`** est hors ligne.**`,
+            timestamp: new Date(currentMinute * 1000 * 60 * 2),
+            color: "16711680"
+        });
+    }
+
+    try {
+        await query(database, "INSERT INTO Nodes_Statuses VALUES (?, ?, 0)", [node.Node_ID, currentMinute]);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+    }
+
+    await updateDailyUptime(node);
+    await updateDailyResponseTime(node);
+}
+
+const updateDailyUptime = async (node) => {
+
+    const day = Math.floor(currentDate / 1000 / 60 / 60 / 24) - 1;
+    const firstMinute = day * 24 * 60 / 2;
+
+    let lastDailyUptime;
+    try {
+        lastDailyUptime = (await query(database, "SELECT * FROM Nodes_Daily_Uptimes WHERE Node_ID=? ORDER BY Day DESC LIMIT 1", [node.Node_ID]))[0];
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        return;
+    }
+
+    if (lastDailyUptime && lastDailyUptime.Day === day)
+        return;
+
+    let statuses;
+    try {
+        statuses = await query(database, "SELECT Minute, Online FROM Nodes_Statuses WHERE Node_ID=? && Minute>=?", [node.Node_ID, firstMinute]);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        return;
+    }
+
+    const totalStatuses = [];
+    for (let minute = firstMinute; minute < firstMinute + 24 * 60 / 2; minute++) {
+        const status = statuses.find((status) => status.Minute === minute);
+        if (!status) continue;
+        totalStatuses.push(status.Online);
+    }
+
+    if (totalStatuses.length < 1) return;
+
+    const uptime = Math.round(totalStatuses.reduce((acc, status) => status ? acc + 1 : acc, 0) / totalStatuses.length * 100 * 100) / 100;
+
+    try {
+        await query(database, "INSERT INTO Nodes_Daily_Uptimes VALUES (?, ?, ?)", [node.Node_ID, day, uptime]);
+        await query(database, "DELETE FROM Nodes_Statuses WHERE Node_ID=? && Minute<?", [node.Node_ID, firstMinute]);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+    }
+}
+
+const updateDailyResponseTime = async (node) => {
+
+    const day = Math.floor(currentDate / 1000 / 60 / 60 / 24) - 1;
+    const firstMinute = day * 24 * 60 / 2;
+
+    let lastDailyResponseTime;
+    try {
+        lastDailyResponseTime = (await query(database, "SELECT * FROM Nodes_Daily_Response_Times WHERE Node_ID=? ORDER BY Day DESC LIMIT 1", [node.Node_ID]))[0];
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        return;
+    }
+
+    if (lastDailyResponseTime && lastDailyResponseTime.Day === day)
+        return;
+
+    let responseTimes;
+    try {
+        responseTimes = await query(database, "SELECT Minute, Response_Time FROM Nodes_Response_Times WHERE Node_ID=? && Minute>=?", [node.Node_ID, firstMinute]);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        return;
+    }
+
+    const totalResponseTimes = [];
+    for (let minute = firstMinute; minute < firstMinute + 24 * 60 / 2; minute++) {
+        const responseTime = responseTimes.find((responseTime) => responseTime.Minute === minute);
+        if (!responseTime) continue;
+        totalResponseTimes.push(responseTime.Response_Time);
+    }
+
+    if (totalResponseTimes.length < 1) return;
+
+    const averageResponseTime = Math.round(totalResponseTimes.reduce((acc, responseTime) => acc + responseTime, 0) / totalResponseTimes.length);
+
+    try {
+        await query(database, "INSERT INTO Nodes_Daily_Response_Times VALUES (?, ?, ?)", [node.Node_ID, day, averageResponseTime]);
+        await query(database, "DELETE FROM Nodes_Response_Times WHERE Node_ID=? && Minute<?", [node.Node_ID, firstMinute]);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+    }
+}

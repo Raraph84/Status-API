@@ -1,0 +1,17 @@
+{
+  "name": "status-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/rest": "^0.4.1",
+    "minecraft-server-util": "^5.2.9",
+    "mysql": "^2.18.1",
+    "node-fetch": "^2.6.7",
+    "raraph84-lib": "^2.0.1",
+    "ws": "^8.5.0"
+  }
+}
