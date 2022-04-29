@@ -20,9 +20,10 @@ module.exports.run = async (request, database) => {
         return;
     }
 
+    const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
+
     const todayUptime = async () => {
 
-        const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
         const firstMinute = day * 24 * 60 / 2;
         const lastMinute = firstMinute + 24 * 60 / 2;
 
@@ -48,8 +49,6 @@ module.exports.run = async (request, database) => {
 
         return uptime;
     }
-
-    const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
 
     let uptimes;
     try {
