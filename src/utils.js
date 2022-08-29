@@ -11,7 +11,7 @@ const checkWebsite = (host) => new Promise((resolve, reject) => {
 
     fetch(host).then((res) => {
 
-        if (res.ok) {
+        if (res.status !== 200) {
             reject("Status code (" + res.status + ") is not 200");
             return;
         }
