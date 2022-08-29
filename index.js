@@ -1,7 +1,7 @@
 const MySQL = require("mysql");
-const { HttpServer, filterEndpointsByPath } = require("raraph84-lib");
+const { getConfig, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
 const Fs = require("fs");
-const Config = require("./config.json");
+const Config = getConfig(__dirname);
 
 const database = MySQL.createPool(Config.database);
 database.query("SELECT 0", (error) => {
@@ -10,7 +10,7 @@ database.query("SELECT 0", (error) => {
 });
 
 const api = new HttpServer();
-api.on("request", async (/** @type {import("raraph84-lib/src").Request} */ request) => {
+api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ request) => {
 
     const endpoints = filterEndpointsByPath(Fs.readdirSync(__dirname + "/src/endpoints")
         .map((endpointFile) => require(__dirname + "/src/endpoints/" + endpointFile)), request);

@@ -1,7 +1,6 @@
 {
     "database": {
         "host": "mysql-raraph84.alwaysdata.net",
-        "port": 3306,
         "user": "raraph84_status",
         "password": "a3FZrp5CW2",
         "database": "raraph84_status"

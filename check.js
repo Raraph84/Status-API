@@ -1,7 +1,7 @@
 const MySQL = require("mysql");
-const { query } = require("raraph84-lib");
+const { getConfig, query } = require("raraph84-lib");
 const { checkWebsite, checkMinecraft, checkApi, checkWs, checkBot, alert } = require("./src/utils");
-const Config = require("./config.json");
+const Config = getConfig(__dirname);
 
 const currentDate = Date.now();
 const currentMinute = Math.floor(currentDate / 1000 / 60 / 2);
@@ -27,58 +27,46 @@ database.query("SELECT 0", async (error) => {
 
 const checkNode = (node) => new Promise((resolve) => {
 
-    const startTime = Date.now();
-
     if (node.Type === "website") {
 
-        checkWebsite(node.Host).then(async (online) => {
-
-            if (online) await nodeOnline(node, Date.now() - startTime);
-            else await nodeOffline(node);
-
-            resolve();
+        checkWebsite(node.Host).then((responseTime) => {
+            nodeOnline(node, responseTime).then(() => resolve());
+        }).catch((error) => {
+            nodeOffline(node, error).then(() => resolve());
         });
 
     } else if (node.Type === "minecraft") {
 
-        checkMinecraft(node.Host).then(async (online) => {
-
-            if (online) await nodeOnline(node, Date.now() - startTime);
-            else await nodeOffline(node);
-
-            resolve();
+        checkMinecraft(node.Host).then((responseTime) => {
+            nodeOnline(node, responseTime).then(() => resolve());
+        }).catch((error) => {
+            nodeOffline(node, error).then(() => resolve());
         });
 
     } else if (node.Type === "api") {
 
-        checkApi(node.Host).then(async (online) => {
-
-            if (online) await nodeOnline(node, Date.now() - startTime);
-            else await nodeOffline(node);
-
-            resolve();
+        checkApi(node.Host).then((responseTime) => {
+            nodeOnline(node, responseTime).then(() => resolve());
+        }).catch((error) => {
+            nodeOffline(node, error).then(() => resolve());
         });
 
     } else if (node.Type === "gateway") {
 
-        checkWs(node.Host).then(async (online) => {
-
-            if (online) await nodeOnline(node, Date.now() - startTime);
-            else await nodeOffline(node);
-
-            resolve();
+        checkWs(node.Host).then((responseTime) => {
+            nodeOnline(node, responseTime).then(() => resolve());
+        }).catch((error) => {
+            nodeOffline(node, error).then(() => resolve());
         });
 
     } else if (node.Type === "bot") {
 
-        checkBot(node.Host).then(async (online) => {
-
-            if (online) await nodeOnline(node);
-            else await nodeOffline(node);
-
-            resolve();
-
-        }).catch(() => resolve());
+        checkBot(node.Host).then(() => {
+            nodeOnline(node, -1).then(() => resolve());
+        }).catch((error) => {
+            if (error !== "Check failed") nodeOffline(node, error).then(() => resolve());
+            else resolve();
+        });
 
     } else resolve();
 });
@@ -119,7 +107,7 @@ const nodeOnline = async (node, responseTime) => {
         console.log(`SQL Error - ${__filename} - ${error}`);
     }
 
-    if (responseTime) {
+    if (responseTime >= 0) {
         try {
             await query(database, "INSERT INTO Nodes_Response_Times VALUES (?, ?, ?)", [node.Node_ID, currentMinute, responseTime]);
         } catch (error) {
@@ -131,7 +119,7 @@ const nodeOnline = async (node, responseTime) => {
     await updateDailyResponseTime(node);
 }
 
-const nodeOffline = async (node) => {
+const nodeOffline = async (node, error) => {
 
     if (await getLastStatus(node)) {
 
@@ -143,7 +131,7 @@ const nodeOffline = async (node) => {
 
         alert({
             title: "Service Hors Ligne",
-            description: `:warning: **Le service **\`${node.Name}\`** est hors ligne.**`,
+            description: `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n` + error,
             timestamp: new Date(currentMinute * 1000 * 60 * 2),
             color: "16711680"
         });

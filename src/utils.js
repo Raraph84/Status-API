@@ -1,73 +1,84 @@
-const Ws = require("ws");
 const { default: fetch } = require("node-fetch");
-const Minecraft = require("minecraft-server-util");
+const Ws = require("ws");
+const { statusLegacy } = require("minecraft-server-util");
 const { REST } = require("@discordjs/rest");
-const Config = require("../config.json");
-const { query } = require("raraph84-lib");
+const { getConfig } = require("raraph84-lib");
+const Config = getConfig(__dirname + "/..");
 
-module.exports.checkWebsite = (host) => new Promise((resolve) => {
+const checkWebsite = (host) => new Promise((resolve, reject) => {
+
+    const startTime = Date.now();
 
     fetch(host).then((res) => {
 
-        if (res.status !== 200) {
-            resolve(false);
+        if (res.ok) {
+            reject("Status code (" + res.status + ") is not 200");
             return;
         }
 
-        resolve(true);
+        resolve(Date.now() - startTime);
 
-    }).catch(() => resolve(false));
+    }).catch((error) => reject(error));
 });
 
-module.exports.checkApi = (host) => new Promise((resolve) => {
+const checkApi = (host) => new Promise((resolve, reject) => {
+
+    const startTime = Date.now();
 
     fetch(host).then((res) => {
 
         res.json()
-            .then(() => resolve(true))
-            .catch(() => resolve(false));
+            .then(() => resolve(Date.now() - startTime))
+            .catch(() => resolve("Invalid JSON"));
 
-    }).catch(() => resolve(false));
+    }).catch((error) => reject(error));
 });
 
-module.exports.checkWs = (host) => new Promise((resolve) => {
+const checkWs = (host) => new Promise((resolve, reject) => {
+
+    const startTime = Date.now();
 
     const ws = new Ws(host);
 
     ws.on("open", () => {
+        resolve(Date.now() - startTime);
         ws.close();
-        resolve(true);
     });
 
-    ws.on("error", () => {
-        resolve(false);
+    ws.on("error", (error) => {
+        reject(error);
     });
 });
 
-module.exports.checkBot = (host) => new Promise((resolve, reject) => {
+const checkBot = (host) => new Promise((resolve, reject) => {
 
     fetch(host).then((res) => {
 
         if (res.status !== 200) {
-            reject();
+            reject("Check failed");
             return;
         }
 
-        res.json()
-            .then((json) => resolve(json.online))
-            .catch(() => reject());
+        res.json().then((json) => {
 
-    }).catch(() => reject());
+            if (json.online) resolve();
+            else reject("Bot offline");
+
+        }).catch(() => reject("Check failed"));
+
+    }).catch(() => reject("Check failed"));
 });
 
-module.exports.checkMinecraft = (host) => new Promise((resolve) => {
+const checkMinecraft = (host) => new Promise((resolve, reject) => {
 
-    Minecraft.statusLegacy(host.split(":")[0], parseInt(host.split(":")[1]) || 25565, { timeout: 10000 })
-        .then(() => resolve(true))
-        .catch(() => resolve(false));
+    const startTime = Date.now();
+
+    statusLegacy(host.split(":")[0], parseInt(host.split(":")[1]) || 25565, { timeout: 10000 })
+        .then(() => resolve(Date.now() - startTime))
+        .catch((error) => reject(error));
 });
 
-module.exports.alert = async (embed) => {
+const alert = async (embed) => {
 
     const rest = new REST({ version: "9" }).setToken(Config.alertBotToken);
 
@@ -75,4 +86,13 @@ module.exports.alert = async (embed) => {
         const channel = await rest.post("/users/@me/channels", { body: { recipients: [alertUser] } });
         await rest.post("/channels/" + channel.id + "/messages", { body: { embeds: [embed] } });
     }
+}
+
+module.exports = {
+    checkWebsite,
+    checkApi,
+    checkWs,
+    checkBot,
+    checkMinecraft,
+    alert
 }

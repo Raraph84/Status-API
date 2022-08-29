@@ -60,6 +60,7 @@ module.exports.run = async (request, database) => {
 
         const totalNodes = nodes.length + subPages.reduce((total, subPages) => total + subPages.totalNodes, 0);
         const onlineNodes = nodes.filter((node) => node.online).length + subPages.reduce((total, subPages) => total + subPages.onlineNodes, 0);
+        const offlineNodes = nodes.filter((node) => !node.online).length + subPages.reduce((total, subPages) => total + subPages.offlineNodes, 0);
 
         return {
             shortName: page.Short_Name,
@@ -68,7 +69,8 @@ module.exports.run = async (request, database) => {
             subPages: subPages,
             nodes: nodes,
             totalNodes,
-            onlineNodes
+            onlineNodes,
+            offlineNodes
         };
     }
 
