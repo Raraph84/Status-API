@@ -4,7 +4,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - deploy: executing remote ssh commands using password
+    - name: Run deploy command on ssh
       uses: appleboy/ssh-action@master
       with:
         host: ssh-raraph84.alwaysdata.net
