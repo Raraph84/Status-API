@@ -1,6 +1,6 @@
+const Fs = require("fs");
 const MySQL = require("mysql");
 const { getConfig, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
-const Fs = require("fs");
 const Config = getConfig(__dirname);
 
 const database = MySQL.createPool(Config.database);
