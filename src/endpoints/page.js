@@ -65,6 +65,7 @@ module.exports.run = async (request, database) => {
         return {
             shortName: page.Short_Name,
             title: page.Title,
+            url: page.URL,
             logoUrl: page.Logo_URL,
             subPages: subPages,
             nodes: nodes,

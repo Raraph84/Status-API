@@ -66,16 +66,11 @@ module.exports.run = async (request, database) => {
         const uptime = uptimes.find((uptime) => uptime.Day === currentDay);
         days.push({
             day: currentDay,
-            onlineRatio: uptime ? uptime.Online_Ratio : -1
+            uptime: uptime ? uptime.Online_Ratio : -1
         });
     }
 
-    const totalUptime = Math.round(days.filter((day) => day.onlineRatio !== -1).reduce((acc, uptime) => acc + uptime.onlineRatio, 0) / days.filter((day) => day.onlineRatio !== -1).length * 100) / 100;
-
-    request.end(200, {
-        days,
-        totalUptime
-    });
+    request.end(200, { uptime: days });
 }
 
 module.exports.infos = {
