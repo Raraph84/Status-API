@@ -29,7 +29,7 @@ const checkApi = (host) => new Promise((resolve, reject) => {
 
         res.json()
             .then(() => resolve(Date.now() - startTime))
-            .catch(() => resolve("Invalid JSON"));
+            .catch(() => reject("Invalid JSON"));
 
     }).catch((error) => reject(error));
 });
