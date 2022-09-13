@@ -74,6 +74,6 @@ module.exports.run = async (request, database) => {
 }
 
 module.exports.infos = {
-    path: "/nodes/:nodeId/uptime",
+    path: "/nodes/:nodeId/uptimes",
     method: "GET"
 }

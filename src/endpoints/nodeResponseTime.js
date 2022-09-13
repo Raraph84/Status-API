@@ -70,15 +70,10 @@ module.exports.run = async (request, database) => {
         });
     }
 
-    const totalResponseTime = Math.round(days.filter((day) => day.averageResponseTime !== -1).reduce((acc, uptime) => acc + uptime.averageResponseTime, 0) / days.filter((day) => day.averageResponseTime !== -1).length);
-
-    request.end(200, {
-        days,
-        totalResponseTime
-    });
+    request.end(200, { responseTimes: days });
 }
 
 module.exports.infos = {
-    path: "/nodes/:nodeId/responseTime",
+    path: "/nodes/:nodeId/responseTimes",
     method: "GET"
 }
