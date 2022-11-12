@@ -49,7 +49,7 @@ module.exports.run = async (request, database) => {
 
         let nodes;
         try {
-            nodes = await query(database, "SELECT Nodes.* FROM Pages_Nodes INNER JOIN Nodes ON Pages_Nodes.Node_ID=Nodes.Node_ID WHERE Page_ID=?", [page.Page_ID]);
+            nodes = await query(database, "SELECT Nodes.*, Pages_Nodes.Position FROM Pages_Nodes INNER JOIN Nodes ON Pages_Nodes.Node_ID=Nodes.Node_ID WHERE Page_ID=?", [page.Page_ID]);
         } catch (error) {
             request.end(500, "Internal server error");
             console.log(`SQL Error - ${__filename} - ${error}`);
