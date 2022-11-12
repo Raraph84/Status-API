@@ -1,18 +1,18 @@
-const Fs = require("fs");
-const MySQL = require("mysql");
+const { readdirSync } = require("fs");
+const { createPool } = require("mysql");
 const { getConfig, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
 const Config = getConfig(__dirname);
 
-const database = MySQL.createPool(Config.database);
+const database = createPool(Config.database);
 database.query("SELECT 0", (error) => {
-    if (error) console.log(`Impossible de se connecter à la base de donnée - ${error}`);
+    if (error) console.log("Impossible de se connecter à la base de donnée - " + error);
     else api.listen(process.env.PORT || 8080);
 });
 
 const api = new HttpServer();
 api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ request) => {
 
-    const endpoints = filterEndpointsByPath(Fs.readdirSync(__dirname + "/src/endpoints")
+    const endpoints = filterEndpointsByPath(readdirSync(__dirname + "/src/endpoints")
         .map((endpointFile) => require(__dirname + "/src/endpoints/" + endpointFile)), request);
 
     request.setHeader("Access-Control-Allow-Origin", "*");

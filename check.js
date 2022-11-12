@@ -1,4 +1,4 @@
-const MySQL = require("mysql");
+const { createPool } = require("mysql");
 const { getConfig, query } = require("raraph84-lib");
 const { checkWebsite, checkMinecraft, checkApi, checkWs, checkBot, alert } = require("./src/utils");
 const Config = getConfig(__dirname);
@@ -6,7 +6,7 @@ const Config = getConfig(__dirname);
 const currentDate = Date.now();
 const currentMinute = Math.floor(currentDate / 1000 / 60 / 2);
 
-const database = MySQL.createPool(Config.database);
+const database = createPool(Config.database);
 database.query("SELECT 0", async (error) => {
     if (error) console.log("Impossible de se connecter à la base de donnée - " + error);
     else {
