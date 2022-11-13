@@ -50,23 +50,23 @@ module.exports.run = async (request, database) => {
         return responseTime;
     }
 
-    let averageResponseTimes;
+    let responseTimes;
     try {
-        averageResponseTimes = await query(database, "SELECT Day, Average_Response_Time FROM Nodes_Daily_Response_Times WHERE Node_ID=? && Day>=?", [node.Node_ID, day - 30 * 3 + 1]);
+        responseTimes = await query(database, "SELECT Day, Average_Response_Time FROM Nodes_Daily_Response_Times WHERE Node_ID=? && Day>=?", [node.Node_ID, day - 30 * 3 + 1]);
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
         return;
     }
 
-    averageResponseTimes.push({ Day: day, Average_Response_Time: await todayResponseTime() });
+    responseTimes.push({ Day: day, Average_Response_Time: await todayResponseTime() });
 
     const days = [];
     for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
-        const averageResponseTime = averageResponseTimes.find((averageResponseTime) => averageResponseTime.Day === currentDay);
+        const responseTime = responseTimes.find((averageResponseTime) => averageResponseTime.Day === currentDay);
         days.push({
             day: currentDay,
-            averageResponseTime: averageResponseTime ? averageResponseTime.Average_Response_Time : -1
+            responseTime: responseTime ? responseTime.Average_Response_Time : -1
         });
     }
 
