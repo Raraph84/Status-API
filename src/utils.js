@@ -1,6 +1,6 @@
 const { default: fetch } = require("node-fetch");
 const Ws = require("ws");
-const { statusLegacy } = require("minecraft-server-util");
+const { status } = require("minecraft-server-util");
 const { REST } = require("@discordjs/rest");
 const { getConfig } = require("raraph84-lib");
 const Config = getConfig(__dirname + "/..");
@@ -73,7 +73,7 @@ const checkMinecraft = (host) => new Promise((resolve, reject) => {
 
     const startTime = Date.now();
 
-    statusLegacy(host.split(":")[0], parseInt(host.split(":")[1]) || 25565, { timeout: 10000 })
+    status(host.split(":")[0], parseInt(host.split(":")[1]) || 25565, { timeout: 10000 })
         .then(() => resolve(Date.now() - startTime))
         .catch((error) => reject(error));
 });
