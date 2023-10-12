@@ -38,7 +38,7 @@ query(database, "SELECT 1").then(async () => {
     if (offlineAlerts.length > 0) {
         await alert({
             title: `Service${offlineAlerts.length > 1 ? "s" : ""} Hors Ligne`,
-            description: offlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n${error}`).join("\n"),
+            description: offlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n${node.error}`).join("\n"),
             timestamp: new Date(currentMinute * 1000 * 60),
             color: "16711680"
         });
@@ -149,7 +149,7 @@ const nodeOffline = async (node, error) => {
             console.log(`SQL Error - ${__filename} - ${error}`);
         }
 
-        offlineAlerts.push(node);
+        offlineAlerts.push({ ...node, error });
     }
 
     try {
