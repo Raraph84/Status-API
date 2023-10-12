@@ -7,7 +7,11 @@ const currentDate = Date.now();
 const currentMinute = Math.floor(currentDate / 1000 / 60 / 2);
 
 const database = createPool(Config.database);
-query(database, "SELECT 1").then(() => {
+console.log("Connexion à la base de données...");
+query(database, "SELECT 1").then(async () => {
+
+    console.log("Connecté à la base de données !");
+    console.log("Vérification des statuts des services...");
 
     let nodes;
     try {
@@ -21,7 +25,9 @@ query(database, "SELECT 1").then(() => {
 
     database.end();
 
-}).catch((error) => console.log("Impossible de se connecter à la base de donnée - " + error));
+    console.log("Vérification des statuts des services terminée !");
+
+}).catch((error) => console.log("Impossible de se connecter à la base de données - " + error));
 
 const checkNode = (node) => new Promise((resolve) => {
 
