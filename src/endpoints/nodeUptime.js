@@ -24,8 +24,8 @@ module.exports.run = async (request, database) => {
 
     const todayUptime = async () => {
 
-        const firstMinute = day * 24 * 60 / 2;
-        const lastMinute = firstMinute + 24 * 60 / 2;
+        const firstMinute = day * 24 * 60;
+        const lastMinute = firstMinute + 24 * 60;
 
         let statuses;
         try {

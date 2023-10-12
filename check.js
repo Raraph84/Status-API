@@ -4,7 +4,7 @@ const { checkWebsite, checkMinecraft, checkApi, checkWs, checkBot, alert } = req
 const Config = getConfig(__dirname);
 
 const currentDate = Date.now();
-const currentMinute = Math.floor(currentDate / 1000 / 60 / 2);
+const currentMinute = Math.floor(currentDate / 1000 / 60);
 
 const database = createPool(Config.database);
 console.log("Connexion à la base de données...");
@@ -100,7 +100,7 @@ const nodeOnline = async (node, responseTime) => {
         alert({
             title: "Service En Ligne",
             description: `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`,
-            timestamp: new Date(currentMinute * 1000 * 60 * 2),
+            timestamp: new Date(currentMinute * 1000 * 60),
             color: "65280"
         });
     }
@@ -136,7 +136,7 @@ const nodeOffline = async (node, error) => {
         alert({
             title: "Service Hors Ligne",
             description: `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n` + error,
-            timestamp: new Date(currentMinute * 1000 * 60 * 2),
+            timestamp: new Date(currentMinute * 1000 * 60),
             color: "16711680"
         });
     }
@@ -154,7 +154,7 @@ const nodeOffline = async (node, error) => {
 const updateDailyUptime = async (node) => {
 
     const day = Math.floor(currentDate / 1000 / 60 / 60 / 24) - 1;
-    const firstMinute = day * 24 * 60 / 2;
+    const firstMinute = day * 24 * 60;
 
     let lastDailyUptime;
     try {
@@ -176,7 +176,7 @@ const updateDailyUptime = async (node) => {
     }
 
     const totalStatuses = [];
-    for (let minute = firstMinute; minute < firstMinute + 24 * 60 / 2; minute++) {
+    for (let minute = firstMinute; minute < firstMinute + 24 * 60; minute++) {
         const status = statuses.find((status) => status.Minute === minute);
         if (!status) continue;
         totalStatuses.push(status.Online);
@@ -197,7 +197,7 @@ const updateDailyUptime = async (node) => {
 const updateDailyResponseTime = async (node) => {
 
     const day = Math.floor(currentDate / 1000 / 60 / 60 / 24) - 1;
-    const firstMinute = day * 24 * 60 / 2;
+    const firstMinute = day * 24 * 60;
 
     let lastDailyResponseTime;
     try {
@@ -219,7 +219,7 @@ const updateDailyResponseTime = async (node) => {
     }
 
     const totalResponseTimes = [];
-    for (let minute = firstMinute; minute < firstMinute + 24 * 60 / 2; minute++) {
+    for (let minute = firstMinute; minute < firstMinute + 24 * 60; minute++) {
         const responseTime = responseTimes.find((responseTime) => responseTime.Minute === minute);
         if (!responseTime) continue;
         totalResponseTimes.push(responseTime.Response_Time);
