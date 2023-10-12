@@ -38,7 +38,7 @@ query(database, "SELECT 1").then(async () => {
             title: `Service${onlineAlerts.length > 1 ? "s" : ""} En Ligne`,
             description: [
                 ...onlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`),
-                ...(alwaysDown.length > 0 ? "**Les services toujours hors ligne sont : " + alwaysDown.map((node) => `**\`${node.Name}\`**`).join(", ") + ".**" : [])
+                ...(alwaysDown.length > 0 ? ["**Les services toujours hors ligne sont : " + alwaysDown.map((node) => `**\`${node.Name}\`**`).join(", ") + ".**"] : [])
             ].join("\n"),
             timestamp: new Date(currentMinute * 1000 * 60),
             color: "65280"
