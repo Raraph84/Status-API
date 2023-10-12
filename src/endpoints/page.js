@@ -31,7 +31,7 @@ module.exports.run = async (request, database) => {
             return;
         }
 
-        return lastStatus ? !!lastStatus.Online : false;
+        return lastStatus && lastStatus.Online;
     }
 
     const getPage = async (page) => {
@@ -56,7 +56,7 @@ module.exports.run = async (request, database) => {
             return;
         }
 
-        nodes = await Promise.all(nodes.map(async (node) => ({ id: node.Node_ID, name: node.Name, online: await getLastStatus(node), position: node.Position })));
+        nodes = await Promise.all(nodes.map(async (node) => ({ id: node.Node_ID, name: node.Name, online: await getLastStatus(node), position: node.Position, disabled: !!node.Disabled })));
 
         const totalNodes = nodes.length + subPages.reduce((total, subPages) => total + subPages.totalNodes, 0);
         const onlineNodes = nodes.filter((node) => node.online).length + subPages.reduce((total, subPages) => total + subPages.onlineNodes, 0);

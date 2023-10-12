@@ -18,7 +18,7 @@ query(database, "SELECT 1").then(async () => {
 
     let nodes;
     try {
-        nodes = await query(database, "SELECT * FROM Nodes");
+        nodes = await query(database, "SELECT * FROM Nodes WHERE Disabled=0");
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         return;

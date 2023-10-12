@@ -32,7 +32,8 @@ module.exports.run = async (request, database) => {
     request.end(200, {
         id: node.Node_ID,
         name: node.Name,
-        online: !!lastStatus && !!lastStatus.Online
+        online: lastStatus && lastStatus.Online,
+        disabled: !!node.Disabled
     });
 }
 
