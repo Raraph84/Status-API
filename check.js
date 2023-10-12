@@ -27,9 +27,19 @@ query(database, "SELECT 1").then(async () => {
     await Promise.all(nodes.map((node) => checkNode(node)));
 
     if (onlineAlerts.length > 0) {
+        let alwaysDown;
+        try {
+            alwaysDown = await query(database, "SELECT Nodes.* FROM Nodes_Events INNER JOIN Nodes ON Nodes.Node_ID=Nodes_Events.Node_ID WHERE (Nodes_Events.Node_ID, Minute) IN (SELECT Node_ID, MAX(Minute) AS Minute FROM Nodes_Events GROUP BY Node_ID) && Online=0 && Disabled=0");
+        } catch (error) {
+            console.log(`SQL Error - ${__filename} - ${error}`);
+            return;
+        }
         await alert({
             title: `Service${onlineAlerts.length > 1 ? "s" : ""} En Ligne`,
-            description: onlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`).join("\n"),
+            description: [
+                ...onlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`),
+                ...(alwaysDown.length > 0 ? "**Les services toujours hors ligne sont : " + alwaysDown.map((node) => `**\`${node.Name}\`**`).join(", ") + ".**" : [])
+            ].join("\n"),
             timestamp: new Date(currentMinute * 1000 * 60),
             color: "65280"
         });
