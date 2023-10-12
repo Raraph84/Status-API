@@ -1,8 +1,7 @@
-const { default: fetch } = require("node-fetch");
-const Ws = require("ws");
 const { status } = require("minecraft-server-util");
 const { REST } = require("@discordjs/rest");
 const { getConfig } = require("raraph84-lib");
+const Ws = require("ws");
 const Config = getConfig(__dirname + "/..");
 
 const checkWebsite = (host) => new Promise((resolve, reject) => {

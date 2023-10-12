@@ -7,23 +7,21 @@ const currentDate = Date.now();
 const currentMinute = Math.floor(currentDate / 1000 / 60 / 2);
 
 const database = createPool(Config.database);
-database.query("SELECT 0", async (error) => {
-    if (error) console.log("Impossible de se connecter à la base de donnée - " + error);
-    else {
+query(database, "SELECT 1").then(() => {
 
-        let nodes;
-        try {
-            nodes = await query(database, "SELECT * FROM Nodes");
-        } catch (error) {
-            console.log(`SQL Error - ${__filename} - ${error}`);
-            return;
-        }
-
-        await Promise.all(nodes.map((node) => checkNode(node)));
-
-        database.end();
+    let nodes;
+    try {
+        nodes = await query(database, "SELECT * FROM Nodes");
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        return;
     }
-});
+
+    await Promise.all(nodes.map((node) => checkNode(node)));
+
+    database.end();
+
+}).catch((error) => console.log("Impossible de se connecter à la base de donnée - " + error));
 
 const checkNode = (node) => new Promise((resolve) => {
 
