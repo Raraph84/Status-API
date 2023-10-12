@@ -58,9 +58,9 @@ module.exports.run = async (request, database) => {
 
         nodes = await Promise.all(nodes.map(async (node) => ({ id: node.Node_ID, name: node.Name, online: await getLastStatus(node), position: node.Position, disabled: !!node.Disabled })));
 
-        const totalNodes = nodes.length + subPages.reduce((total, subPages) => total + subPages.totalNodes, 0);
-        const onlineNodes = nodes.filter((node) => node.online).length + subPages.reduce((total, subPages) => total + subPages.onlineNodes, 0);
-        const offlineNodes = nodes.filter((node) => !node.online).length + subPages.reduce((total, subPages) => total + subPages.offlineNodes, 0);
+        const totalNodes = nodes.filter((node) => !node.disabled).length + subPages.reduce((total, subPages) => total + subPages.totalNodes, 0);
+        const onlineNodes = nodes.filter((node) => !node.disabled && node.online).length + subPages.reduce((total, subPages) => total + subPages.onlineNodes, 0);
+        const offlineNodes = nodes.filter((node) => !node.disabled && !node.online).length + subPages.reduce((total, subPages) => total + subPages.offlineNodes, 0);
 
         return {
             shortName: page.Short_Name,
