@@ -6,6 +6,9 @@ const Config = getConfig(__dirname);
 const currentDate = Date.now();
 const currentMinute = Math.floor(currentDate / 1000 / 60);
 
+const onlineAlerts = [];
+const offlineAlerts = [];
+
 const database = createPool(Config.database);
 console.log("Connexion à la base de données...");
 query(database, "SELECT 1").then(async () => {
@@ -22,6 +25,24 @@ query(database, "SELECT 1").then(async () => {
     }
 
     await Promise.all(nodes.map((node) => checkNode(node)));
+
+    if (onlineAlerts.length > 0) {
+        await alert({
+            title: `Service${onlineAlerts.length > 1 ? "s" : ""} En Ligne`,
+            description: onlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`).join("\n"),
+            timestamp: new Date(currentMinute * 1000 * 60),
+            color: "65280"
+        });
+    }
+
+    if (offlineAlerts.length > 0) {
+        await alert({
+            title: `Service${offlineAlerts.length > 1 ? "s" : ""} Hors Ligne`,
+            description: offlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n${error}`).join("\n"),
+            timestamp: new Date(currentMinute * 1000 * 60),
+            color: "16711680"
+        });
+    }
 
     database.end();
 
@@ -97,12 +118,7 @@ const nodeOnline = async (node, responseTime) => {
             console.log(`SQL Error - ${__filename} - ${error}`);
         }
 
-        alert({
-            title: "Service En Ligne",
-            description: `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`,
-            timestamp: new Date(currentMinute * 1000 * 60),
-            color: "65280"
-        });
+        onlineAlerts.push(node);
     }
 
     try {
@@ -133,12 +149,7 @@ const nodeOffline = async (node, error) => {
             console.log(`SQL Error - ${__filename} - ${error}`);
         }
 
-        alert({
-            title: "Service Hors Ligne",
-            description: `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n` + error,
-            timestamp: new Date(currentMinute * 1000 * 60),
-            color: "16711680"
-        });
+        offlineAlerts.push(node);
     }
 
     try {
