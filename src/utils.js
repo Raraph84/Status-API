@@ -1,5 +1,5 @@
 const { request } = require("https");
-const { pingWithPromise, ping } = require("minecraft-ping-js");
+const { pingWithPromise } = require("minecraft-ping-js");
 const { REST } = require("@discordjs/rest");
 const { getConfig } = require("raraph84-lib");
 const Ws = require("ws");
