@@ -1,4 +1,5 @@
-const { status } = require("minecraft-server-util");
+const { request } = require("https");
+const { pingWithPromise, ping } = require("minecraft-ping-js");
 const { REST } = require("@discordjs/rest");
 const { getConfig } = require("raraph84-lib");
 const Ws = require("ws");
@@ -6,31 +7,57 @@ const Config = getConfig(__dirname + "/..");
 
 const checkWebsite = (host) => new Promise((resolve, reject) => {
 
-    const startTime = Date.now();
+    let tlsHandshakeAt = 0;
+    let firstByteAt = 0;
 
-    fetch(host).then((res) => {
+    const req = request(host);
+    req.on("socket", (socket) => {
+        socket.on("secureConnect", () => tlsHandshakeAt = Date.now());
+    });
+    req.on("response", (res) => {
+        res.once("readable", () => firstByteAt = Date.now());
+        res.on("data", () => { });
+        res.on("end", () => {
 
-        if (res.status !== 200) {
-            reject("Status code (" + res.status + ") is not 200");
-            return;
-        }
+            if (res.statusCode !== 200) {
+                reject("Status code (" + res.statusCode + ") is not 200");
+                return;
+            }
 
-        resolve(Date.now() - startTime);
-
-    }).catch((error) => reject(error));
+            resolve(firstByteAt - tlsHandshakeAt);
+        });
+    });
+    req.on("error", (error) => reject(error));
+    req.end();
 });
 
 const checkApi = (host) => new Promise((resolve, reject) => {
 
-    const startTime = Date.now();
+    let tlsHandshakeAt = 0;
+    let firstByteAt = 0;
 
-    fetch(host).then((res) => {
+    const req = request(host);
+    req.on("socket", (socket) => {
+        socket.on("secureConnect", () => tlsHandshakeAt = Date.now());
+    });
+    req.on("response", (res) => {
+        res.once("readable", () => firstByteAt = Date.now());
+        let data = "";
+        res.on("data", (chunk) => data += chunk);
+        res.on("end", () => {
 
-        res.json()
-            .then(() => resolve(Date.now() - startTime))
-            .catch(() => reject("Invalid JSON"));
+            try {
+                JSON.parse(data);
+            } catch (error) {
+                reject("Invalid JSON");
+                return;
+            }
 
-    }).catch((error) => reject(error));
+            resolve(firstByteAt - tlsHandshakeAt);
+        });
+    });
+    req.on("error", (error) => reject(error));
+    req.end();
 });
 
 const checkWs = (host) => new Promise((resolve, reject) => {
@@ -70,10 +97,8 @@ const checkBot = (host) => new Promise((resolve, reject) => {
 
 const checkMinecraft = (host) => new Promise((resolve, reject) => {
 
-    const startTime = Date.now();
-
-    status(host.split(":")[0], parseInt(host.split(":")[1]) || 25565, { timeout: 10000 })
-        .then(() => resolve(Date.now() - startTime))
+    pingWithPromise(host.split(":")[0], parseInt(host.split(":")[1]) || 25565)
+        .then((res) => resolve(res.ping))
         .catch((error) => reject(error));
 });
 
