@@ -60,6 +60,7 @@ const checkNodes = async () => {
             })
         });
         checks = await checks.json();
+        checks = checks.checks;
     } catch (error) {
         console.log(`Checker Error - ${__filename} - ${error}`);
         return;
