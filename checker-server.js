@@ -1,6 +1,6 @@
 const { createPool } = require("mysql");
 const { REST } = require("@discordjs/rest");
-const { getConfig, TaskManager, query, WebSocketServer, randomString } = require("raraph84-lib");
+const { getConfig, TaskManager, query } = require("raraph84-lib");
 const Config = getConfig(__dirname);
 
 const tasks = new TaskManager();
@@ -17,201 +17,100 @@ tasks.addTask((resolve, reject) => {
     });
 }, (resolve) => database.end(() => resolve()));
 
-const checking = [];
-
-const server = new WebSocketServer(Config.port);
-server.on("connection", (/** @type {import("raraph84-lib/src/WebSocketClient")} */ client) => {
-    setTimeout(() => {
-        if (!client.infos.logged)
-            client.close("Please login");
-    }, 10 * 1000);
-});
-server.on("command", (commandName, /** @type {import("raraph84-lib/src/WebSocketClient")} */ client, message) => {
-
-    if (commandName === "LOGIN") {
-
-        if (client.infos.logged) {
-            client.close("Already logged");
-            return;
-        }
-
-        if (typeof message.token !== "string") {
-            client.close("Token must be a string");
-            return;
-        }
-
-        if (message.token !== Config.clientToken) {
-            client.close("Invalid token");
-            return;
-        }
-
-        client.infos.logged = true;
-        client.emitEvent("LOGGED");
-
-        console.log("Client connecté");
-
-    } else if (commandName === "HEARTBEAT") {
-
-        if (!client.infos.logged) {
-            client.close("Please login");
-            return;
-        }
-
-        if (!client.infos.waitingHeartbeat) {
-            client.close("Useless heartbeat");
-            return;
-        }
-
-        client.infos.waitingHeartbeat = false;
-
-    } else if (commandName === "NODE_CHECKED") {
-
-        if (!client.infos.logged) {
-            client.close("Please login");
-            return;
-        }
-
-        if (typeof message.nonce !== "string") {
-            client.close("Nonce must be a string");
-            return;
-        }
-
-        const check = checking.find((check) => check.nonce === message.nonce);
-        if (!check) {
-            client.close("Invalid nonce");
-            return;
-        }
-
-        check.callback(message);
-        checking.splice(checking.indexOf(check), 1);
-
-    } else
-        client.close("Invalid command");
-});
-server.on("close", (/** @type {import("raraph84-lib/src/WebSocketClient")} */ client) => {
-    if (client.infos.logged)
-        console.log("Client déconnecté");
-});
-let heartbeatInterval;
-tasks.addTask((resolve, reject) => {
-    console.log("Lancement du serveur sur le port " + Config.port + "...");
-    server.listen(Config.port).then(() => {
-        heartbeatInterval = setInterval(() => {
-
-            server.clients.filter((client) => client.infos.logged).forEach((client) => {
-                client.infos.waitingHeartbeat = true;
-                client.emitEvent("HEARTBEAT");
-            });
-
-            setTimeout(() => {
-                server.clients.filter((client) => client.infos.waitingHeartbeat).forEach((client) => {
-                    client.close("Please respond to heartbeat");
-                });
-            }, 10 * 1000);
-
-        }, 30 * 1000);
-        console.log("Serveur lancé !");
-        resolve();
-    }).catch((error) => {
-        console.log("Impossible de lancer le serveur - " + error);
-        reject();
-    });
-}, (resolve) => { clearInterval(heartbeatInterval); server.close().then(() => resolve()); });
-
-let onlineAlerts = [];
-let offlineAlerts = [];
-let currentDate = 0;
-let currentMinute = 0;
-
 let checkerInterval;
 tasks.addTask((resolve) => {
-    checkerInterval = setInterval(async () => {
-
-        onlineAlerts = [];
-        offlineAlerts = [];
-        currentDate = Date.now();
-        currentMinute = Math.floor(currentDate / 1000 / 60);
-
-        console.log("Vérification des statuts des services...");
-
-        let nodes;
-        try {
-            nodes = await query(database, "SELECT * FROM Nodes WHERE Disabled=0");
-        } catch (error) {
-            console.log(`SQL Error - ${__filename} - ${error}`);
-            return;
-        }
-
-        await Promise.all(nodes.map((node) => checkNode(node)));
-
-        if (onlineAlerts.length > 0) {
-            let alwaysDown;
-            try {
-                alwaysDown = await query(database, "SELECT Nodes.* FROM Nodes_Events INNER JOIN Nodes ON Nodes.Node_ID=Nodes_Events.Node_ID WHERE (Nodes_Events.Node_ID, Minute) IN (SELECT Node_ID, MAX(Minute) AS Minute FROM Nodes_Events GROUP BY Node_ID) && Online=0 && Disabled=0");
-            } catch (error) {
-                console.log(`SQL Error - ${__filename} - ${error}`);
-                return;
-            }
-            await alert({
-                title: `Service${onlineAlerts.length > 1 ? "s" : ""} En Ligne`,
-                description: [
-                    ...onlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`),
-                    ...(alwaysDown.length > 0 ? ["**Les services toujours hors ligne sont : " + alwaysDown.map((node) => `**\`${node.Name}\`**`).join(", ") + ".**"] : [])
-                ].join("\n"),
-                timestamp: new Date(currentMinute * 1000 * 60),
-                color: "65280"
-            });
-        }
-
-        if (offlineAlerts.length > 0) {
-            await alert({
-                title: `Service${offlineAlerts.length > 1 ? "s" : ""} Hors Ligne`,
-                description: offlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n${node.error}`).join("\n"),
-                timestamp: new Date(currentMinute * 1000 * 60),
-                color: "16711680"
-            });
-        }
-
-        console.log("Vérification des statuts des services terminée !");
-
-    }, 5 * 60 * 1000);
+    checkerInterval = setInterval(() => checkNodes(), 5 * 60 * 1000);
     resolve();
 }, (resolve) => { clearInterval(checkerInterval); resolve(); });
 
 tasks.run();
 
-const checkNode = (node) => new Promise((resolve) => {
+let onlineAlerts;
+let offlineAlerts;
+let currentDate;
+let currentMinute;
 
-    const client = server.clients.find((client) => client.infos.logged);
-    if (!client) {
-        resolve();
+const checkNodes = async () => {
+
+    console.log("Vérification des statuts des services...");
+
+    onlineAlerts = [];
+    offlineAlerts = [];
+    currentDate = Date.now();
+    currentMinute = Math.floor(currentDate / 1000 / 60);
+
+    let nodes;
+    try {
+        nodes = await query(database, "SELECT * FROM Nodes WHERE Disabled=0");
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
         return;
     }
 
-    const nonce = randomString(32);
+    let checks;
+    try {
+        checks = await fetch(Config.checkerUrl, {
+            method: "POST",
+            headers: { authorization: Config.checkerToken },
+            body: JSON.stringify({
+                checks: nodes.map((node) => ({
+                    type: node.Type,
+                    host: node.Host
+                }))
+            })
+        });
+        checks = await checks.json();
+    } catch (error) {
+        console.log(`Checker Error - ${__filename} - ${error}`);
+        return;
+    }
 
-    checking.push({
-        nonce,
-        callback: (response) => {
-            if (node.Type !== "bot") {
-                if (response.online)
-                    nodeOnline(node, response.responseTime).then(() => resolve());
-                else
-                    nodeOffline(node, response.error).then(() => resolve());
-            } else {
-                if (response.online)
-                    nodeOnline(node, -1).then(() => resolve());
-                else {
-                    if (error !== "Check failed") nodeOffline(node, response.error).then(() => resolve());
-                    else resolve();
-                }
-            }
-            resolve();
+    for (let i = 0; i < nodes.length; i++) {
+
+        const node = nodes[i];
+        const check = checks[i];
+
+        if (node.Type !== "bot") {
+            if (check.online) await nodeOnline(node, check.responseTime);
+            else await nodeOffline(node, check.error);
+        } else {
+            if (check.online) await nodeOnline(node);
+            else if (error !== "Check failed") await nodeOffline(node, check.error);
         }
-    });
+    }
 
-    client.emitEvent("CHECK_NODE", { type: node.Type, host: node.Host, nonce });
-});
+    if (offlineAlerts.length > 0) {
+        await alert({
+            title: `Service${offlineAlerts.length > 1 ? "s" : ""} Hors Ligne`,
+            description: offlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est hors ligne.**\n${node.error}`).join("\n"),
+            timestamp: new Date(currentMinute * 1000 * 60),
+            color: "16711680"
+        });
+    }
+
+    if (onlineAlerts.length > 0) {
+
+        let stillDown;
+        try {
+            stillDown = await query(database, "SELECT Nodes.* FROM Nodes_Events INNER JOIN Nodes ON Nodes.Node_ID=Nodes_Events.Node_ID WHERE (Nodes_Events.Node_ID, Minute) IN (SELECT Node_ID, MAX(Minute) AS Minute FROM Nodes_Events GROUP BY Node_ID) && Online=0 && Disabled=0");
+        } catch (error) {
+            console.log(`SQL Error - ${__filename} - ${error}`);
+            return;
+        }
+
+        await alert({
+            title: `Service${onlineAlerts.length > 1 ? "s" : ""} En Ligne`,
+            description: [
+                ...onlineAlerts.map((node) => `:warning: **Le service **\`${node.Name}\`** est de nouveau en ligne.**`),
+                ...(stillDown.length > 0 ? ["**Les services toujours hors ligne sont : " + stillDown.map((node) => `**\`${node.Name}\`**`).join(", ") + ".**"] : [])
+            ].join("\n"),
+            timestamp: new Date(currentMinute * 1000 * 60),
+            color: "65280"
+        });
+    }
+
+    console.log("Vérification des statuts des services terminée !");
+}
 
 const getLastStatus = async (node) => {
 
@@ -225,7 +124,7 @@ const getLastStatus = async (node) => {
     return lastStatus ? !!lastStatus.Online : false;
 }
 
-const nodeOnline = async (node, responseTime) => {
+const nodeOnline = async (node, responseTime = -1) => {
 
     if (!await getLastStatus(node)) {
 
