@@ -1,4 +1,4 @@
 node_modules/
 package-lock.json
 deploy.bat
-config.json.dev
+config.dev.json
