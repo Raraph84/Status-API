@@ -1,11 +1,11 @@
 const { readdirSync } = require("fs");
 const { createPool } = require("mysql");
 const { getConfig, TaskManager, query, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
-const Config = getConfig(__dirname);
+const config = getConfig(__dirname);
 
 const tasks = new TaskManager();
 
-const database = createPool(Config.database);
+const database = createPool(config.database);
 tasks.addTask((resolve, reject) => {
     console.log("Connexion à la base de données...");
     query(database, "SELECT 1").then(() => {
