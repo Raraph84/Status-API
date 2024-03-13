@@ -1,9 +1,9 @@
 {
     "database": {
-        "host": "mysql-raraph84.alwaysdata.net",
-        "user": "raraph84_status",
-        "password": "a3FZrp5CW2",
-        "database": "raraph84_status"
+        "host": "checker-1.status.raraph.fr",
+        "user": "Status_API",
+        "password": "ZHiSX3P7SV",
+        "database": "Status"
     },
     "alertBotToken": "NzU0MjU1NzE1NjAxNzQzODcz.X1yFXw.Zol4CBC7sbfOHHDZSFdVgvYljnw",
     "alertUsers": [
