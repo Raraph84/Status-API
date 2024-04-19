@@ -3,9 +3,11 @@ const { createPool } = require("mysql");
 const { getConfig, TaskManager, query, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
 const config = getConfig(__dirname);
 
+require("dotenv").config({ path: [".env.local", ".env"] });
+
 const tasks = new TaskManager();
 
-const database = createPool(config.database);
+const database = createPool({ password: process.env.DATABASE_PASSWORD, charset: "utf8mb4_general_ci", ...config.database });
 tasks.addTask((resolve, reject) => {
     console.log("Connexion à la base de données...");
     query(database, "SELECT 1").then(() => {
@@ -17,11 +19,13 @@ tasks.addTask((resolve, reject) => {
     });
 }, (resolve) => database.end(() => resolve()));
 
+const endpointsFiles = readdirSync(__dirname + "/src/endpoints")
+    .map((endpointFile) => require(__dirname + "/src/endpoints/" + endpointFile));
+
 const api = new HttpServer();
 api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ request) => {
 
-    const endpoints = filterEndpointsByPath(readdirSync(__dirname + "/src/endpoints")
-        .map((endpointFile) => require(__dirname + "/src/endpoints/" + endpointFile)), request);
+    const endpoints = filterEndpointsByPath(endpointsFiles, request);
 
     request.setHeader("Access-Control-Allow-Origin", "*");
 
