@@ -6,7 +6,7 @@ module.exports.run = async (request, database) => {
 
     let page;
     try {
-        [page] = await database.query("SELECT * FROM Pages WHERE Short_Name=?", [request.urlParams.shortName]);
+        [page] = await database.query("SELECT * FROM Pages WHERE Short_Name=? || Domain=?", [request.urlParams.shortName, request.urlParams.shortName]);
         page = page[0];
     } catch (error) {
         request.end(500, "Internal server error");
