@@ -49,14 +49,21 @@ module.exports.run = async (request, database) => {
 
         let nodes;
         try {
-            [nodes] = await database.query("SELECT Nodes.*, Pages_Nodes.Position FROM Pages_Nodes INNER JOIN Nodes ON Pages_Nodes.Node_ID=Nodes.Node_ID WHERE Page_ID=?", [page.Page_ID]);
+            [nodes] = await database.query("SELECT Nodes.*, Pages_Nodes.Position, Pages_Nodes.Display_Name FROM Pages_Nodes INNER JOIN Nodes ON Pages_Nodes.Node_ID=Nodes.Node_ID WHERE Page_ID=?", [page.Page_ID]);
         } catch (error) {
             request.end(500, "Internal server error");
             console.log(`SQL Error - ${__filename} - ${error}`);
             return;
         }
 
-        nodes = await Promise.all(nodes.map(async (node) => ({ id: node.Node_ID, name: node.Name, online: await getLastStatus(node), position: node.Position, disabled: !!node.Disabled })));
+        nodes = await Promise.all(nodes.map(async (node) => ({
+            id: node.Node_ID,
+            name: node.Name,
+            online: await getLastStatus(node),
+            position: node.Position,
+            displayName: node.Display_Name,
+            disabled: !!node.Disabled
+        })));
 
         const totalNodes = nodes.filter((node) => !node.disabled).length + subPages.reduce((total, subPages) => total + subPages.totalNodes, 0);
         const onlineNodes = nodes.filter((node) => !node.disabled && node.online).length + subPages.reduce((total, subPages) => total + subPages.onlineNodes, 0);
