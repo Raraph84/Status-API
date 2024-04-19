@@ -1,6 +1,6 @@
 const { readdirSync } = require("fs");
-const { createPool } = require("mysql");
-const { getConfig, TaskManager, query, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
+const { createPool } = require("mysql2/promise");
+const { getConfig, TaskManager, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
 const config = getConfig(__dirname);
 
 require("dotenv").config({ path: [".env.local", ".env"] });
@@ -8,16 +8,18 @@ require("dotenv").config({ path: [".env.local", ".env"] });
 const tasks = new TaskManager();
 
 const database = createPool({ password: process.env.DATABASE_PASSWORD, charset: "utf8mb4_general_ci", ...config.database });
-tasks.addTask((resolve, reject) => {
+tasks.addTask(async (resolve, reject) => {
     console.log("Connexion à la base de données...");
-    query(database, "SELECT 1").then(() => {
-        console.log("Connecté à la base de données !");
-        resolve();
-    }).catch((error) => {
+    try {
+        await database.query("SELECT 1");
+    } catch (error) {
         console.log("Impossible de se connecter à la base de données - " + error);
         reject();
-    });
-}, (resolve) => database.end(() => resolve()));
+        return;
+    }
+    console.log("Connecté à la base de données !");
+    resolve();
+}, (resolve) => database.end().then(() => resolve()));
 
 const endpointsFiles = readdirSync(__dirname + "/src/endpoints")
     .map((endpointFile) => require(__dirname + "/src/endpoints/" + endpointFile));
@@ -62,6 +64,6 @@ tasks.addTask((resolve, reject) => {
         console.log("Impossible de lancer le serveur HTTP - " + error);
         reject();
     });
-}, (resolve) => database.end(() => resolve()));
+}, (resolve) => api.close().then(() => resolve()));
 
 tasks.run();

@@ -1,14 +1,13 @@
-const { query } = require("raraph84-lib");
-
 /**
  * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql").Pool} database 
+ * @param {import("mysql2/promise").Pool} database 
  */
 module.exports.run = async (request, database) => {
 
     let page;
     try {
-        page = (await query(database, "SELECT * FROM Pages WHERE Short_Name=?", [request.urlParams.shortName]))[0];
+        [page] = await database.query("SELECT * FROM Pages WHERE Short_Name=?", [request.urlParams.shortName]);
+        page = page[0];
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -24,7 +23,8 @@ module.exports.run = async (request, database) => {
 
         let lastStatus;
         try {
-            lastStatus = (await query(database, "SELECT * FROM Nodes_Events WHERE Node_ID=? ORDER BY Minute DESC LIMIT 1", [node.Node_ID]))[0];
+            [lastStatus] = await database.query("SELECT * FROM Nodes_Events WHERE Node_ID=? ORDER BY Minute DESC LIMIT 1", [node.Node_ID]);
+            lastStatus = lastStatus[0];
         } catch (error) {
             request.end(500, "Internal server error");
             console.log(`SQL Error - ${__filename} - ${error}`);
@@ -38,7 +38,7 @@ module.exports.run = async (request, database) => {
 
         let subPages;
         try {
-            subPages = await query(database, "SELECT * FROM Pages_Subpages INNER JOIN Pages ON Pages.Page_ID=Pages_Subpages.Subpage_ID WHERE Pages_Subpages.Page_ID=?", [page.Page_ID]);
+            [subPages] = await database.query("SELECT * FROM Pages_Subpages INNER JOIN Pages ON Pages.Page_ID=Pages_Subpages.Subpage_ID WHERE Pages_Subpages.Page_ID=?", [page.Page_ID]);
         } catch (error) {
             request.end(500, "Internal server error");
             console.log(`SQL Error - ${__filename} - ${error}`);
@@ -49,7 +49,7 @@ module.exports.run = async (request, database) => {
 
         let nodes;
         try {
-            nodes = await query(database, "SELECT Nodes.*, Pages_Nodes.Position FROM Pages_Nodes INNER JOIN Nodes ON Pages_Nodes.Node_ID=Nodes.Node_ID WHERE Page_ID=?", [page.Page_ID]);
+            [nodes] = await database.query("SELECT Nodes.*, Pages_Nodes.Position FROM Pages_Nodes INNER JOIN Nodes ON Pages_Nodes.Node_ID=Nodes.Node_ID WHERE Page_ID=?", [page.Page_ID]);
         } catch (error) {
             request.end(500, "Internal server error");
             console.log(`SQL Error - ${__filename} - ${error}`);

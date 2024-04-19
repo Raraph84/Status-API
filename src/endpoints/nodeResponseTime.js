@@ -1,14 +1,13 @@
-const { query } = require("raraph84-lib");
-
 /**
  * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql").Pool} database 
+ * @param {import("mysql2/promise").Pool} database 
  */
 module.exports.run = async (request, database) => {
 
     let node;
     try {
-        node = (await query(database, "SELECT * FROM Nodes WHERE Node_ID=?", [request.urlParams.nodeId]))[0];
+        [node] = await database.query("SELECT * FROM Nodes WHERE Node_ID=?", [request.urlParams.nodeId]);
+        node = node[0];
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -29,7 +28,7 @@ module.exports.run = async (request, database) => {
 
         let responseTimes;
         try {
-            responseTimes = await query(database, "SELECT Minute, Response_Time FROM Nodes_Response_Times WHERE Node_ID=? && Minute>=? && Minute<?", [node.Node_ID, firstMinute, lastMinute]);
+            [responseTimes] = await database.query("SELECT Minute, Response_Time FROM Nodes_Response_Times WHERE Node_ID=? && Minute>=? && Minute<?", [node.Node_ID, firstMinute, lastMinute]);
         } catch (error) {
             request.end(500, "Internal server error");
             console.log(`SQL Error - ${__filename} - ${error}`);
@@ -52,7 +51,7 @@ module.exports.run = async (request, database) => {
 
     let responseTimes;
     try {
-        responseTimes = await query(database, "SELECT Day, Average_Response_Time FROM Nodes_Daily_Response_Times WHERE Node_ID=? && Day>=?", [node.Node_ID, day - 30 * 3 + 1]);
+        [responseTimes] = await database.query("SELECT Day, Average_Response_Time FROM Nodes_Daily_Response_Times WHERE Node_ID=? && Day>=?", [node.Node_ID, day - 30 * 3 + 1]);
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);

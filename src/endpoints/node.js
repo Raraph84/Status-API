@@ -1,14 +1,13 @@
-const { query } = require("raraph84-lib");
-
 /**
  * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql").Pool} database 
+ * @param {import("mysql2/promise").Pool} database 
  */
 module.exports.run = async (request, database) => {
 
     let node;
     try {
-        node = (await query(database, "SELECT * FROM Nodes WHERE Node_ID=?", [request.urlParams.id]))[0];
+        [node] = await database.query("SELECT * FROM Nodes WHERE Node_ID=?", [request.urlParams.id]);
+        node = node[0];
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -22,7 +21,8 @@ module.exports.run = async (request, database) => {
 
     let lastStatus;
     try {
-        lastStatus = (await query(database, "SELECT * FROM Nodes_Events WHERE Node_ID=? ORDER BY Minute DESC LIMIT 1", [node.Node_ID]))[0];
+        [lastStatus] = await database.query("SELECT * FROM Nodes_Events WHERE Node_ID=? ORDER BY Minute DESC LIMIT 1", [node.Node_ID]);
+        lastStatus = lastStatus[0];
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
