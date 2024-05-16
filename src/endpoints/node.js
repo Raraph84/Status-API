@@ -19,10 +19,10 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    let lastStatus;
+    let lastEvent;
     try {
-        [lastStatus] = await database.query("SELECT * FROM Nodes_Events WHERE Node_ID=? ORDER BY Minute DESC LIMIT 1", [node.Node_ID]);
-        lastStatus = lastStatus[0];
+        [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? ORDER BY minute DESC LIMIT 1", [node.Node_ID]);
+        lastEvent = lastEvent[0];
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -32,7 +32,7 @@ module.exports.run = async (request, database) => {
     request.end(200, {
         id: node.Node_ID,
         name: node.Name,
-        online: lastStatus && lastStatus.Online,
+        online: !!lastEvent?.online || false,
         disabled: !!node.Disabled
     });
 }
