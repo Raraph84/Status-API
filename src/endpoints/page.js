@@ -47,10 +47,10 @@ module.exports.run = async (request, database) => {
         const offlineServices = services.filter((service) => !service.disabled && !service.online).length + subPages.reduce((total, subPages) => total + subPages.offlineNodes, 0);
 
         return {
-            shortName: page.Short_Name,
-            title: page.Title,
-            url: page.URL,
-            logoUrl: page.Logo_URL,
+            shortName: page.short_name,
+            title: page.title,
+            url: page.url,
+            logoUrl: page.logo_url,
             subPages: subPages,
             nodes: services,
             totalNodes: totalServices,
