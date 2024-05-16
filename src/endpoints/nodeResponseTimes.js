@@ -4,18 +4,18 @@
  */
 module.exports.run = async (request, database) => {
 
-    let node;
+    let service;
     try {
-        [node] = await database.query("SELECT * FROM Nodes WHERE Node_ID=?", [request.urlParams.nodeId]);
-        node = node[0];
+        [service] = await database.query("SELECT * FROM services WHERE service_id=?", [request.urlParams.serviceId]);
+        service = service[0];
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
         return;
     }
 
-    if (!node) {
-        request.end(400, "This node does not exist");
+    if (!service) {
+        request.end(400, "This service does not exist");
         return;
     }
 
@@ -23,7 +23,7 @@ module.exports.run = async (request, database) => {
 
     let statuses;
     try {
-        [statuses] = await database.query("SELECT * FROM services_daily_statuses WHERE service_id=? && day>=?", [node.Node_ID, day - 30 * 3 + 1]);
+        [statuses] = await database.query("SELECT * FROM services_daily_statuses WHERE service_id=? && day>=?", [service.service_id, day - 30 * 3 + 1]);
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -32,7 +32,7 @@ module.exports.run = async (request, database) => {
 
     const getTodayResponseTime = async () => {
 
-        const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && minute>=? && minute<?", [node.Node_ID, day * 24 * 60, (day + 1) * 24 * 60]);
+        const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && minute>=? && minute<?", [service.service_id, day * 24 * 60, (day + 1) * 24 * 60]);
 
         const onlineStatuses = statuses.filter((status) => status.online);
         return onlineStatuses.length > 0 ? Math.round(onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) / onlineStatuses.length) : -1;
@@ -61,6 +61,6 @@ module.exports.run = async (request, database) => {
 }
 
 module.exports.infos = {
-    path: "/nodes/:nodeId/responseTimes",
+    path: "/nodes/:serviceId/responseTimes",
     method: "GET"
 }

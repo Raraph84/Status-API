@@ -4,24 +4,24 @@
  */
 module.exports.run = async (request, database) => {
 
-    let node;
+    let service;
     try {
-        [node] = await database.query("SELECT * FROM Nodes WHERE Node_ID=?", [request.urlParams.id]);
-        node = node[0];
+        [service] = await database.query("SELECT * FROM services WHERE service_id=?", [request.urlParams.serviceId]);
+        service = service[0];
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
         return;
     }
 
-    if (!node) {
-        request.end(400, "This node does not exist");
+    if (!service) {
+        request.end(400, "This service does not exist");
         return;
     }
 
     let lastEvent;
     try {
-        [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? ORDER BY minute DESC LIMIT 1", [node.Node_ID]);
+        [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? ORDER BY minute DESC LIMIT 1", [service.service_id]);
         lastEvent = lastEvent[0];
     } catch (error) {
         request.end(500, "Internal server error");
@@ -30,14 +30,14 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(200, {
-        id: node.Node_ID,
-        name: node.Name,
+        id: service.service_id,
+        name: service.name,
         online: !!lastEvent?.online || false,
-        disabled: !!node.Disabled
+        disabled: !!service.disabled
     });
 }
 
 module.exports.infos = {
-    path: "/nodes/:id",
+    path: "/nodes/:serviceId",
     method: "GET"
 }
