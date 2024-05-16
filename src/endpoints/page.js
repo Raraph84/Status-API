@@ -42,9 +42,9 @@ module.exports.run = async (request, database) => {
             disabled: !!service.disabled
         })));
 
-        const totalServices = services.filter((service) => !service.disabled).length + subPages.reduce((total, subPages) => total + subPages.totalNodes, 0);
-        const onlineServices = services.filter((service) => !service.disabled && service.online).length + subPages.reduce((total, subPages) => total + subPages.onlineNodes, 0);
-        const offlineServices = services.filter((service) => !service.disabled && !service.online).length + subPages.reduce((total, subPages) => total + subPages.offlineNodes, 0);
+        const totalServices = services.filter((service) => !service.disabled).length + subPages.reduce((total, subPages) => total + subPages.totalServices, 0);
+        const onlineServices = services.filter((service) => !service.disabled && service.online).length + subPages.reduce((total, subPages) => total + subPages.onlineServices, 0);
+        const offlineServices = services.filter((service) => !service.disabled && !service.online).length + subPages.reduce((total, subPages) => total + subPages.offlineServices, 0);
 
         return {
             shortName: page.short_name,
@@ -52,10 +52,10 @@ module.exports.run = async (request, database) => {
             url: page.url,
             logoUrl: page.logo_url,
             subPages: subPages,
-            nodes: services,
-            totalNodes: totalServices,
-            onlineNodes: onlineServices,
-            offlineNodes: offlineServices
+            services,
+            totalServices: totalServices,
+            onlineServices: onlineServices,
+            offlineServices: offlineServices
         };
     };
 

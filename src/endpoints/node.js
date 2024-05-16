@@ -38,6 +38,6 @@ module.exports.run = async (request, database) => {
 }
 
 module.exports.infos = {
-    path: "/nodes/:serviceId",
+    path: "/services/:serviceId",
     method: "GET"
 }
