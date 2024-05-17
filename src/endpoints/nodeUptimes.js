@@ -34,7 +34,7 @@ module.exports.run = async (request, database) => {
 
         const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && minute>=? && minute<?", [service.service_id, day * 24 * 60, (day + 1) * 24 * 60]);
 
-        return statuses.length > 0 ? Math.round(statuses.filter((status) => status.online).length / statuses.length * 100 * 100) / 100 : -1;
+        return statuses.length > 0 ? Math.round(statuses.filter((status) => status.online).length / statuses.length * 100 * 100) / 100 : null;
     };
 
     let todayUptime;
@@ -52,7 +52,7 @@ module.exports.run = async (request, database) => {
     for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
         uptimes.push({
             day: currentDay,
-            uptime: statuses.find((status) => status.day === currentDay)?.uptime || -1
+            uptime: statuses.find((status) => status.day === currentDay)?.uptime || null
         });
     }
 
