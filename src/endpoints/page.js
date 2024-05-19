@@ -37,7 +37,7 @@ module.exports.run = async (request, database) => {
             id: service.service_id,
             name: service.name,
             online: await getLastStatus(service),
-            position: service.Position,
+            position: service.position,
             displayName: service.display_name,
             disabled: !!service.disabled
         })));
