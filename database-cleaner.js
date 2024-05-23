@@ -22,11 +22,11 @@ tasks.addTask(async (resolve, reject) => {
 
 const sqls = [];
 
-tasks.addTask(async (resolve) => {
+tasks.addTask(async (resolve, reject) => {
 
-    let nodes;
+    let services;
     try {
-        [nodes] = await database.query("SELECT * FROM Nodes");
+        [services] = await database.query("SELECT * FROM services");
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         reject();
@@ -45,10 +45,10 @@ tasks.addTask(async (resolve) => {
     }
 
     for (const servicesDailyStatus of servicesDailyStatuses) {
-        const node = nodes.find((node) => node.Node_ID === servicesDailyStatus.service_id);
-        if (!node) {
-            console.log(`Service ${servicesDailyStatus.service_id} not found in nodes table, deleting...`);
-            sqls.push(`DELETE FROM services_daily_statuses WHERE service_id = ${servicesDailyStatus.service_id}`);
+        const service = services.find((service) => service.service_id === servicesDailyStatus.service_id);
+        if (!service) {
+            console.log(`Service ${servicesDailyStatus.service_id} not found in services table, deleting...`);
+            sqls.push(`DELETE FROM services_daily_statuses WHERE service_id = ${servicesDailyStatus.service_id};`);
         }
     }
 
@@ -64,10 +64,10 @@ tasks.addTask(async (resolve) => {
     }
 
     for (const servicesEvent of servicesEvents) {
-        const node = nodes.find((node) => node.Node_ID === servicesEvent.service_id);
-        if (!node) {
-            console.log(`Service ${servicesEvent.service_id} not found in nodes table, deleting...`);
-            sqls.push(`DELETE FROM services_events WHERE service_id = ${servicesEvent.service_id}`);
+        const service = services.find((service) => service.service_id === servicesEvent.service_id);
+        if (!service) {
+            console.log(`Service ${servicesEvent.service_id} not found in services table, deleting...`);
+            sqls.push(`DELETE FROM services_events WHERE service_id = ${servicesEvent.service_id};`);
         }
     }
 
@@ -83,39 +83,39 @@ tasks.addTask(async (resolve) => {
     }
 
     for (const servicesStatus of servicesStatuses) {
-        const node = nodes.find((node) => node.Node_ID === servicesStatus.service_id);
-        if (!node) {
-            console.log(`Service ${servicesStatus.service_id} not found in nodes table, deleting...`);
-            sqls.push(`DELETE FROM services_statuses WHERE service_id = ${servicesStatus.service_id}`);
+        const service = services.find((service) => service.service_id === servicesStatus.service_id);
+        if (!service) {
+            console.log(`Service ${servicesStatus.service_id} not found in services table, deleting...`);
+            sqls.push(`DELETE FROM services_statuses WHERE service_id = ${servicesStatus.service_id};`);
         }
     }
 
     let pages;
     try {
-        [pages] = await database.query("SELECT * FROM Pages");
+        [pages] = await database.query("SELECT * FROM pages");
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         reject();
         return;
     }
 
-    console.log("Cleaning pages nodes...");
+    console.log("Cleaning pages services...");
 
-    let pagesNodes;
+    let pagesServices;
     try {
-        [pagesNodes] = await database.query("SELECT * FROM Pages_Nodes");
+        [pagesServices] = await database.query("SELECT * FROM pages_services");
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         reject();
         return;
     }
 
-    for (const pagesNode of pagesNodes) {
-        const page = pages.find((page) => page.Page_ID === pagesNode.Page_ID);
-        const node = nodes.find((node) => node.Node_ID === pagesNode.Node_ID);
-        if (!page || !node) {
-            console.log(`Page ${pagesNode.Page_ID} or node ${pagesNode.Node_ID} not found, deleting...`);
-            sqls.push(`DELETE FROM Pages_Nodes WHERE Page_ID = ${pagesNode.Page_ID} && Node_ID = ${pagesNode.Node_ID}`);
+    for (const pagesService of pagesServices) {
+        const page = pages.find((page) => page.page_id === pagesService.page_id);
+        const service = services.find((service) => service.service_id === pagesService.service_id);
+        if (!page || !service) {
+            console.log(`Page ${pagesService.page_id} or service ${pagesService.service_id} not found, deleting...`);
+            sqls.push(`DELETE FROM pages_services WHERE page_id = ${pagesService.page_id} && service_id = ${pagesService.service_id};`);
         }
     }
 
@@ -123,7 +123,7 @@ tasks.addTask(async (resolve) => {
 
     let pagesSubpages;
     try {
-        [pagesSubpages] = await database.query("SELECT * FROM Pages_Subpages");
+        [pagesSubpages] = await database.query("SELECT * FROM pages_subpages");
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         reject();
@@ -131,11 +131,11 @@ tasks.addTask(async (resolve) => {
     }
 
     for (const pagesSubpage of pagesSubpages) {
-        const page = pages.find((page) => page.Page_ID === pagesSubpage.Page_ID);
-        const subpage = pages.find((page) => page.Page_ID === pagesSubpage.Subpage_ID);
+        const page = pages.find((page) => page.page_id === pagesSubpage.page_id);
+        const subpage = pages.find((page) => page.page_id === pagesSubpage.subpage_id);
         if (!page || !subpage) {
-            console.log(`Page ${pagesSubpage.Page_ID} or subpage ${pagesSubpage.Subpage_ID} not found, deleting...`);
-            sqls.push(`DELETE FROM Pages_Subpages WHERE Page_ID = ${pagesSubpage.Page_ID} && Subpage_ID = ${pagesSubpage.Subpage_ID}`);
+            console.log(`Page ${pagesSubpage.page_id} or subpage ${pagesSubpage.subpage_id} not found, deleting...`);
+            sqls.push(`DELETE FROM Pages_Subpages WHERE page_id = ${pagesSubpage.page_id} && subpage_id = ${pagesSubpage.subpage_id};`);
         }
     }
 
