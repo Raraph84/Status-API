@@ -53,7 +53,7 @@ module.exports.run = async (request, database) => {
     for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
         responseTimes.push({
             day: currentDay,
-            responseTime: statuses.find((status) => status.day === currentDay)?.response_time || null
+            responseTime: statuses.find((status) => status.day === currentDay)?.response_time ?? null
         });
     }
 

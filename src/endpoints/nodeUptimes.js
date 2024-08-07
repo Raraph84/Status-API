@@ -52,7 +52,7 @@ module.exports.run = async (request, database) => {
     for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
         uptimes.push({
             day: currentDay,
-            uptime: statuses.find((status) => status.day === currentDay)?.uptime || null
+            uptime: statuses.find((status) => status.day === currentDay)?.uptime ?? null
         });
     }
 
