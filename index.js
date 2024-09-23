@@ -1,4 +1,5 @@
 const { readdirSync } = require("fs");
+const { join } = require("path");
 const { createPool } = require("mysql2/promise");
 const { getConfig, TaskManager, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
 const config = getConfig(__dirname);
@@ -21,8 +22,8 @@ tasks.addTask(async (resolve, reject) => {
     resolve();
 }, (resolve) => database.end().then(() => resolve()));
 
-const endpointsFiles = readdirSync(__dirname + "/src/endpoints")
-    .map((endpointFile) => require(__dirname + "/src/endpoints/" + endpointFile));
+const endpointsFiles = readdirSync(join(__dirname, "src", "endpoints"), { recursive: true }).filter((file) => file.endsWith(".js"))
+    .map((endpoint) => require(join(__dirname, "src", "endpoints", endpoint)));
 
 const api = new HttpServer();
 api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ request) => {
@@ -49,6 +50,21 @@ api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ reque
     if (!endpoint) {
         request.end(405, "Method not allowed");
         return;
+    }
+
+    if (endpoint.infos.requiresAuth && !request.headers.authorization) {
+        request.end(401, "Missing authorization");
+        return;
+    }
+
+    if (request.headers.authorization) {
+
+        if (request.headers.authorization !== process.env.PANEL_KEY) {
+            request.end(401, "Missing authorization");
+            return;
+        }
+
+        request.authenticated = true;
     }
 
     request.urlParams = endpoint.params;

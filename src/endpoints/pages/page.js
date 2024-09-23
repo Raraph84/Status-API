@@ -73,5 +73,6 @@ module.exports.run = async (request, database) => {
 
 module.exports.infos = {
     path: "/pages/:shortName",
-    method: "GET"
+    method: "GET",
+    requiresAuth: false
 }

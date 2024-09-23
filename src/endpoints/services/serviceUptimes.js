@@ -61,5 +61,6 @@ module.exports.run = async (request, database) => {
 
 module.exports.infos = {
     path: "/services/:serviceId/uptimes",
-    method: "GET"
+    method: "GET",
+    requiresAuth: false
 }
