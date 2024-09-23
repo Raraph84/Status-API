@@ -1,40 +1,27 @@
+const { getServices } = require("../../resources");
+
 /**
  * @param {import("raraph84-lib/src/Request")} request 
  * @param {import("mysql2/promise").Pool} database 
  */
 module.exports.run = async (request, database) => {
 
+    const includes = request.searchParams.get("includes")?.toLowerCase().split(",") || [];
+
     let service;
     try {
-        [service] = await database.query("SELECT * FROM services WHERE service_id=?", [request.urlParams.serviceId]);
-        service = service[0];
+        service = await getServices(database, [request.urlParams.serviceId], includes);
     } catch (error) {
         request.end(500, "Internal server error");
-        console.log(`SQL Error - ${__filename} - ${error}`);
         return;
     }
 
-    if (!service) {
+    if (!service[0][0]) {
         request.end(400, "This service does not exist");
         return;
     }
 
-    let lastEvent;
-    try {
-        [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? ORDER BY minute DESC LIMIT 1", [service.service_id]);
-        lastEvent = lastEvent[0];
-    } catch (error) {
-        request.end(500, "Internal server error");
-        console.log(`SQL Error - ${__filename} - ${error}`);
-        return;
-    }
-
-    request.end(200, {
-        id: service.service_id,
-        name: service.name,
-        online: !!lastEvent?.online || false,
-        disabled: !!service.disabled
-    });
+    request.end(200, service[request.authenticated ? 0 : 1][0]);
 }
 
 module.exports.infos = {

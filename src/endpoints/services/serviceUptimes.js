@@ -1,3 +1,5 @@
+const { getServices } = require("../../resources");
+
 /**
  * @param {import("raraph84-lib/src/Request")} request 
  * @param {import("mysql2/promise").Pool} database 
@@ -6,11 +8,9 @@ module.exports.run = async (request, database) => {
 
     let service;
     try {
-        [service] = await database.query("SELECT * FROM services WHERE service_id=?", [request.urlParams.serviceId]);
-        service = service[0];
+        service = (await getServices(database, [request.urlParams.serviceId]))[0][0];
     } catch (error) {
         request.end(500, "Internal server error");
-        console.log(`SQL Error - ${__filename} - ${error}`);
         return;
     }
 
@@ -23,7 +23,7 @@ module.exports.run = async (request, database) => {
 
     let statuses;
     try {
-        [statuses] = await database.query("SELECT * FROM services_daily_statuses WHERE service_id=? && day>=?", [service.service_id, day - 30 * 3 + 1]);
+        [statuses] = await database.query("SELECT * FROM services_daily_statuses WHERE service_id=? && day>=?", [service.id, day - 30 * 3 + 1]);
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -32,7 +32,7 @@ module.exports.run = async (request, database) => {
 
     const getTodayUptime = async () => {
 
-        const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && minute>=? && minute<?", [service.service_id, day * 24 * 60, (day + 1) * 24 * 60]);
+        const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && minute>=? && minute<?", [service.id, day * 24 * 60, (day + 1) * 24 * 60]);
 
         return statuses.length > 0 ? Math.round(statuses.filter((status) => status.online).length / statuses.length * 100 * 100) / 100 : null;
     };
