@@ -181,7 +181,9 @@ const getServices = async (database, serviceId = null, includes = []) => {
 
     return [services.map((service) => ({
         id: service.service_id,
+        type: service.type,
         name: service.name,
+        host: service.host,
         disabled: !!service.disabled,
         online: service?.online
     })), services.map((service) => ({
@@ -192,9 +194,91 @@ const getServices = async (database, serviceId = null, includes = []) => {
     }))];
 };
 
+/**
+ * @param {import("mysql2/promise").Pool} database 
+ * @param {number[]} checkerId 
+ * @param {string[]} includes 
+ * @returns {Promise<[privateChecker[], publicChecker[]]>} 
+ */
+const getCheckers = async (database, checkerId = null, includes = []) => {
+
+    const args = [];
+    let sql = "SELECT * FROM checkers";
+    if (checkerId) {
+        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " checker_id IN (?)";
+        args.push(checkerId);
+    }
+
+    let checkers;
+    try {
+        [checkers] = await database.query(sql, args);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        throw new Error("Database error");
+    }
+
+    if (checkers.length > 0 && includes.includes("services")) {
+        const checkersServices = await getCheckersServices(database, checkers.map((checker) => checker.checker_id), subIncludes(includes, "services"));
+        for (const checker of checkers) {
+            const servicesIndexes = checkersServices[0].map((s, i) => i).filter((i) => (checkersServices[0][i].checker.id ?? checkersServices[0][i].checker) === checker.checker_id);
+            checker.services = [servicesIndexes.map((i) => checkersServices[0][i]), servicesIndexes.map((i) => checkersServices[1][i])];
+        }
+    }
+
+    return [checkers.map((checker) => ({
+        id: checker.checker_id,
+        name: checker.name,
+        description: checker.description,
+        location: checker.location,
+        checkSecond: checker.check_second,
+        hidden: !!checker.hidden,
+        services: checker.services ? checker.services[0] : undefined
+    })), checkers.map((checker) => ({
+        id: checker.checker_id,
+        name: checker.name,
+        location: checker.location,
+        services: checker.services ? checker.services[1] : undefined
+    }))];
+};
+
+/**
+ * @param {import("mysql2/promise").Pool} database 
+ * @param {number[]} checkerId 
+ * @param {string[]} includes 
+ * @returns {Promise<[privateCheckerService[], publicCheckerService[]]>} 
+ */
+const getCheckersServices = async (database, checkerId = null, includes = []) => {
+
+    const args = [];
+    let sql = "SELECT * FROM checkers_services";
+    if (checkerId) {
+        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " checker_id IN (?)";
+        args.push(checkerId);
+    }
+
+    let checkersServices;
+    try {
+        [checkersServices] = await database.query(sql, args);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        throw new Error("Database error");
+    }
+
+    const checkers = checkersServices.length > 0 && includes.includes("checker") ? await getCheckers(database, checkersServices.map((checkerService) => checkerService.checker_id), subIncludes(includes, "checker")) : [];
+    const services = checkersServices.length > 0 && includes.includes("service") ? await getServices(database, checkersServices.map((checkerService) => checkerService.service_id), subIncludes(includes, "service")) : [];
+
+    return [checkersServices.map((checkerService) => ({
+        checker: checkers[0]?.find((checker) => checker.id === checkerService.checker_id) ?? checkerService.checker_id,
+        service: services[0]?.find((service) => service.id === checkerService.service_id) ?? checkerService.service_id
+    })), checkersServices.map((checkerService) => ({
+        checker: checkers[1]?.find((checker) => checker.id === checkerService.checker_id) ?? checkerService.checker_id,
+        service: services[1]?.find((service) => service.id === checkerService.service_id) ?? checkerService.service_id
+    }))];
+};
+
 const subIncludes = (includes, name) => includes.filter((include) => include.startsWith(name + ".")).map((include) => include.replace(name + ".", ""));
 
-module.exports = { getPages, getServices };
+module.exports = { getPages, getServices, getCheckers };
 
 /**
  * @typedef {{
@@ -257,4 +341,31 @@ module.exports = { getPages, getServices };
  *     disabled: boolean;
  *     online?: boolean;
  * }} publicService 
+ * 
+ * 
+ * @typedef {{
+ *     id: number;
+ *     name: string;
+ *     description: string;
+ *     location: string;
+ *     checkSecond: number;
+ *     hidden: boolean;
+ * }} privateChecker 
+ * 
+ * @typedef {{
+ *     id: number;
+ *     name: string;
+ *     location: string;
+ * }} publicChecker 
+ * 
+ * 
+ * @typedef {{
+ *     checker: privateChecker|number;
+ *     service: privateService|number;
+ * }} privateCheckerService 
+ * 
+ * @typedef {{
+ *     checker: publicChecker|null;
+ *     service: publicService|null;
+ * }} publicCheckerService 
  */
