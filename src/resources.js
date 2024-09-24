@@ -1,5 +1,59 @@
 /**
  * @param {import("mysql2/promise").Pool} database 
+ * @param {number[]} serviceId 
+ * @param {string[]} includes 
+ * @returns {Promise<[privateService[], publicService[]]>} 
+ */
+const getServices = async (database, serviceId = null, includes = []) => {
+
+    const args = [];
+    let sql = "SELECT * FROM services";
+    if (serviceId) {
+        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " service_id IN (?)";
+        args.push(serviceId);
+    }
+
+    let services;
+    try {
+        [services] = await database.query(sql, args);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        throw new Error("Database error");
+    }
+
+    if (services.length > 0 && includes.includes("online")) {
+        await Promise.all(services.map(async (service) => {
+
+            let lastEvent;
+            try {
+                [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? ORDER BY minute DESC LIMIT 1", [service.service_id]);
+                lastEvent = lastEvent[0];
+            } catch (error) {
+                console.log(`SQL Error - ${__filename} - ${error}`);
+                throw new Error("Database error");
+            }
+
+            service.online = !!lastEvent?.online;
+        }));
+    }
+
+    return [services.map((service) => ({
+        id: service.service_id,
+        type: service.type,
+        name: service.name,
+        host: service.host,
+        disabled: !!service.disabled,
+        online: service?.online
+    })), services.map((service) => ({
+        id: service.service_id,
+        name: service.name,
+        disabled: !!service.disabled,
+        online: service?.online
+    }))];
+};
+
+/**
+ * @param {import("mysql2/promise").Pool} database 
  * @param {number[]} pageId 
  * @param {string[]} shortName 
  * @param {string[]} domain 
@@ -142,60 +196,6 @@ const getPagesServices = async (database, pageId = null, includes = []) => {
 
 /**
  * @param {import("mysql2/promise").Pool} database 
- * @param {number[]} serviceId 
- * @param {string[]} includes 
- * @returns {Promise<[privateService[], publicService[]]>} 
- */
-const getServices = async (database, serviceId = null, includes = []) => {
-
-    const args = [];
-    let sql = "SELECT * FROM services";
-    if (serviceId) {
-        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " service_id IN (?)";
-        args.push(serviceId);
-    }
-
-    let services;
-    try {
-        [services] = await database.query(sql, args);
-    } catch (error) {
-        console.log(`SQL Error - ${__filename} - ${error}`);
-        throw new Error("Database error");
-    }
-
-    if (services.length > 0 && includes.includes("online")) {
-        await Promise.all(services.map(async (service) => {
-
-            let lastEvent;
-            try {
-                [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? ORDER BY minute DESC LIMIT 1", [service.service_id]);
-                lastEvent = lastEvent[0];
-            } catch (error) {
-                console.log(`SQL Error - ${__filename} - ${error}`);
-                throw new Error("Database error");
-            }
-
-            service.online = !!lastEvent?.online;
-        }));
-    }
-
-    return [services.map((service) => ({
-        id: service.service_id,
-        type: service.type,
-        name: service.name,
-        host: service.host,
-        disabled: !!service.disabled,
-        online: service?.online
-    })), services.map((service) => ({
-        id: service.service_id,
-        name: service.name,
-        disabled: !!service.disabled,
-        online: service?.online
-    }))];
-};
-
-/**
- * @param {import("mysql2/promise").Pool} database 
  * @param {number[]} checkerId 
  * @param {string[]} includes 
  * @returns {Promise<[privateChecker[], publicChecker[]]>} 
@@ -283,6 +283,21 @@ module.exports = { getPages, getServices, getCheckers };
 /**
  * @typedef {{
  *     id: number;
+ *     name: string;
+ *     disabled: boolean;
+ *     online?: boolean;
+ * }} privateService 
+ * 
+ * @typedef {{
+ *     id: number;
+ *     name: string;
+ *     disabled: boolean;
+ *     online?: boolean;
+ * }} publicService 
+ * 
+ * 
+ * @typedef {{
+ *     id: number;
  *     shortName: string;
  *     title: string;
  *     url: string;
@@ -326,21 +341,6 @@ module.exports = { getPages, getServices, getCheckers };
  *     position: number;
  *     displayName: string;
  * }} publicPageService 
- * 
- * 
- * @typedef {{
- *     id: number;
- *     name: string;
- *     disabled: boolean;
- *     online?: boolean;
- * }} privateService 
- * 
- * @typedef {{
- *     id: number;
- *     name: string;
- *     disabled: boolean;
- *     online?: boolean;
- * }} publicService 
  * 
  * 
  * @typedef {{
