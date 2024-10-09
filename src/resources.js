@@ -278,7 +278,7 @@ const getCheckersServices = async (database, checkerId = null, includes = []) =>
 
 const subIncludes = (includes, name) => includes.filter((include) => include.startsWith(name + ".")).map((include) => include.replace(name + ".", ""));
 
-module.exports = { getPages, getServices, getCheckers };
+module.exports = { getServices, getPages, getPagesSubPages, getPagesServices, getCheckers, getCheckersServices };
 
 /**
  * @typedef {{

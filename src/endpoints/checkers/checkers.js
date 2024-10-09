@@ -16,7 +16,7 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    request.end(200, { checkers: checkers[0] });
+    request.end(200, { checkers: checkers[request.admin ? 0 : 1] });
 }
 
 module.exports.infos = {

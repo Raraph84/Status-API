@@ -1,4 +1,4 @@
-const { getCheckers } = require("../../resources");
+const { getCheckers, getCheckersServices } = require("../../../resources");
 
 /**
  * @param {import("raraph84-lib/src/Request")} request 
@@ -10,22 +10,30 @@ module.exports.run = async (request, database) => {
 
     let checker;
     try {
-        checker = await getCheckers(database, [request.urlParams.checkerId], includes);
+        checker = (await getCheckers(database, [request.urlParams.checkerId]))[0][0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
     }
 
-    if (!checker[0][0]) {
+    if (!checker) {
         request.end(400, "This checker does not exist");
         return;
     }
 
-    request.end(200, checker[request.admin ? 0 : 1][0]);
+    let checkerServices;
+    try {
+        checkerServices = await getCheckersServices(database, [checker.id], includes);
+    } catch (error) {
+        request.end(500, "Internal server error");
+        return;
+    }
+
+    request.end(200, { services: checkerServices[request.admin ? 0 : 1] });
 }
 
 module.exports.infos = {
-    path: "/checkers/:checkerId",
+    path: "/checkers/:checkerId/services",
     method: "GET",
     requiresAuth: true
 }
