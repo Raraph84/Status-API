@@ -34,13 +34,8 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    if (request.jsonBody.name.length < 3) {
-        request.end(400, "Name must be at least 3 characters long");
-        return;
-    }
-
-    if (request.jsonBody.name.length > 50) {
-        request.end(400, "Name must be at most 50 characters long");
+    if (request.jsonBody.name.length < 2 || request.jsonBody.name.length > 50) {
+        request.end(400, "Name must be between 2 and 50 characters");
         return;
     }
 
@@ -54,14 +49,9 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    if (request.jsonBody.host.length < 2) {
-        request.end(400, "Host must be at least 2 characters long");
+    if (request.jsonBody.host.length < 2 || request.jsonBody.host.length > 100) {
+        request.end(400, "Host must be between 2 and 100 characters");
         return;
-    }
-
-    if (request.jsonBody.host.length > 100) {
-        request.end(400, "Host must be at most 100 characters long");
-        return
     }
 
     if (typeof request.jsonBody.disabled === "undefined") {
