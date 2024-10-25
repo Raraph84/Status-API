@@ -60,7 +60,7 @@ api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ reque
     if (request.headers.authorization) {
 
         if (request.headers.authorization !== process.env.PANEL_KEY) {
-            request.end(401, "Missing authorization");
+            request.end(401, "Invalid token");
             return;
         }
 
