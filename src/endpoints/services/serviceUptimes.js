@@ -34,7 +34,8 @@ module.exports.run = async (request, database) => {
 
         const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && minute>=? && minute<?", [service.id, day * 24 * 60, (day + 1) * 24 * 60]);
 
-        return statuses.length > 0 ? Math.round(statuses.filter((status) => status.online).length / statuses.length * 100 * 100) / 100 : null;
+        const onlineStatuses = statuses.filter((status) => status.online);
+        return statuses.length > 0 ? Math.round(onlineStatuses.length / statuses.length * 100 * 1000) / 1000 : null;
     };
 
     let todayUptime;
