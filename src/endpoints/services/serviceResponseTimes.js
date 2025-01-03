@@ -1,4 +1,6 @@
+const { getConfig } = require("raraph84-lib");
 const { getServices } = require("../../resources");
+const config = getConfig(__dirname + "/../../..");
 
 /**
  * @param {import("raraph84-lib/src/Request")} request 
@@ -23,7 +25,7 @@ module.exports.run = async (request, database) => {
 
     let statuses;
     try {
-        [statuses] = await database.query("SELECT * FROM services_daily_statuses WHERE service_id=? && day>=?", [service.id, day - 30 * 3 + 1]);
+        [statuses] = await database.query("SELECT * FROM services_daily_statuses WHERE service_id=? && checker_id=? && day>=?", [service.id, config.dataCheckerId, day - 30 * 3 + 1]);
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -32,7 +34,7 @@ module.exports.run = async (request, database) => {
 
     const getTodayResponseTime = async () => {
 
-        const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && minute>=? && minute<?", [service.id, day * 24 * 60, (day + 1) * 24 * 60]);
+        const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && checker_id=? && minute>=? && minute<?", [service.id, config.dataCheckerId, day * 24 * 60, (day + 1) * 24 * 60]);
 
         const onlineStatuses = statuses.filter((status) => status.online);
         return onlineStatuses.length > 0 ? Math.round(onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) / onlineStatuses.length * 10) / 10 : null;

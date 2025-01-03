@@ -3,5 +3,6 @@
         "host": "checker.status.polycube.fr",
         "user": "Status_API",
         "database": "Status"
-    }
+    },
+    "dataCheckerId": 2
 }
