@@ -14,8 +14,9 @@ module.exports.run = async (request, database) => {
     if (typeof request.jsonBody.type === "undefined"
         && typeof request.jsonBody.name === "undefined"
         && typeof request.jsonBody.host === "undefined"
+        && typeof request.jsonBody.protocol === "undefined"
         && typeof request.jsonBody.disabled === "undefined") {
-        request.end(400, "Missing type, name, host or disabled");
+        request.end(400, "Missing type, name, host, protocol or disabled");
         return;
     }
 
@@ -81,6 +82,22 @@ module.exports.run = async (request, database) => {
 
         sql += (!sql.includes("SET") ? "SET" : ",") + " host=?";
         args.push(request.jsonBody.host);
+    }
+
+    if (typeof request.jsonBody.protocol !== "undefined") {
+
+        if (typeof request.jsonBody.protocol !== "number") {
+            request.end(400, "Protocol must be a number");
+            return;
+        }
+
+        if (![0, 4, 6].includes(request.jsonBody.protocol)) {
+            request.end(400, "Protocol must be a 0, 4 or 6");
+            return;
+        }
+
+        sql += (!sql.includes("SET") ? "SET" : ",") + " protocol=?";
+        args.push(request.jsonBody.protocol);
     }
 
     if (typeof request.jsonBody.disabled !== "undefined") {
