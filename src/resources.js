@@ -43,6 +43,7 @@ const getServices = async (database, serviceId = null, includes = []) => {
         name: service.name,
         host: service.host,
         protocol: service.protocol,
+        alert: !!service.alert,
         disabled: !!service.disabled,
         online: service?.online
     })), services.map((service) => ({
