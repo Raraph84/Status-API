@@ -15,8 +15,9 @@ module.exports.run = async (request, database) => {
         && typeof request.jsonBody.name === "undefined"
         && typeof request.jsonBody.host === "undefined"
         && typeof request.jsonBody.protocol === "undefined"
+        && typeof request.jsonBody.alert === "undefined"
         && typeof request.jsonBody.disabled === "undefined") {
-        request.end(400, "Missing type, name, host, protocol or disabled");
+        request.end(400, "Missing type, name, host, protocol, alert or disabled");
         return;
     }
 
@@ -109,6 +110,17 @@ module.exports.run = async (request, database) => {
 
         sql += (!sql.includes("SET") ? "SET" : ",") + " disabled=?";
         args.push(request.jsonBody.disabled);
+    }
+
+    if (typeof request.jsonBody.alert !== "undefined") {
+
+        if (typeof request.jsonBody.alert !== "boolean") {
+            request.end(400, "Alert must be a boolean");
+            return;
+        }
+
+        sql += (!sql.includes("SET") ? "SET" : ",") + " alert=?";
+        args.push(request.jsonBody.alert);
     }
 
     sql += " WHERE service_id=?";

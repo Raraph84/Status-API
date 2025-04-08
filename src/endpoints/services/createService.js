@@ -69,6 +69,16 @@ module.exports.run = async (request, database) => {
         return;
     }
 
+    if (typeof request.jsonBody.alert === "undefined") {
+        request.end(400, "Missing alert");
+        return;
+    }
+
+    if (typeof request.jsonBody.alert !== "boolean") {
+        request.end(400, "Alert must be a boolean");
+        return;
+    }
+
     if (typeof request.jsonBody.disabled === "undefined") {
         request.end(400, "Missing disabled");
         return;
@@ -81,7 +91,7 @@ module.exports.run = async (request, database) => {
 
     let serviceId;
     try {
-        serviceId = (await database.query("INSERT INTO services (type, name, host, protocol, disabled) VALUES (?, ?, ?, ?, ?)", [request.jsonBody.type, request.jsonBody.name, request.jsonBody.host, request.jsonBody.protocol, request.jsonBody.disabled]))[0].insertId;
+        serviceId = (await database.query("INSERT INTO services (type, name, host, protocol, alert, disabled) VALUES (?, ?, ?, ?, ?, ?)", [request.jsonBody.type, request.jsonBody.name, request.jsonBody.host, request.jsonBody.protocol, request.jsonBody.alert, request.jsonBody.disabled]))[0].insertId;
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);

@@ -90,6 +90,25 @@ tasks.addTask(async (resolve, reject) => {
         }
     }
 
+    console.log("Cleaning services smokeping...");
+
+    let servicesSmokeping;
+    try {
+        [servicesSmokeping] = await database.query("SELECT * FROM services_smokeping GROUP BY service_id");
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        reject();
+        return;
+    }
+
+    for (const serviceSmokeping of servicesSmokeping) {
+        const service = services.find((service) => service.service_id === serviceSmokeping.service_id);
+        if (!service) {
+            console.log(`Service ${serviceSmokeping.service_id} not found in services table, deleting...`);
+            sqls.push(`DELETE FROM services_smokeping WHERE service_id = ${serviceSmokeping.service_id};`);
+        }
+    }
+
     let pages;
     try {
         [pages] = await database.query("SELECT * FROM pages");
