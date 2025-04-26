@@ -1,3 +1,6 @@
+const { getConfig } = require("raraph84-lib");
+const config = getConfig(__dirname + "/..");
+
 /**
  * @param {import("mysql2/promise").Pool} database 
  * @param {number[]} serviceId 
@@ -26,7 +29,7 @@ const getServices = async (database, serviceId = null, includes = []) => {
 
             let lastEvent;
             try {
-                [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? ORDER BY minute DESC LIMIT 1", [service.service_id]);
+                [lastEvent] = await database.query("SELECT * FROM services_events WHERE service_id=? && checker_id=? ORDER BY minute DESC LIMIT 1", [service.service_id, config.dataCheckerId]);
                 lastEvent = lastEvent[0];
             } catch (error) {
                 console.log(`SQL Error - ${__filename} - ${error}`);
