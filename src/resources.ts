@@ -379,9 +379,39 @@ export const getGroups = async (
         throw new Error("Database error");
     }
 
+    if (groups.length > 0 && includes.includes("services")) {
+        const groupsServices = await getGroupsServices(
+            database,
+            groups.map((group) => group.group_id),
+            subIncludes(includes, "services")
+        );
+        for (const group of groups) {
+            const servicesIndexes = groupsServices
+                .map((s, i) => i)
+                .filter((i) => ((groupsServices[i].group as Group).id ?? groupsServices[i].group) === group.group_id);
+            group.services = servicesIndexes.map((i) => groupsServices[i]);
+        }
+    }
+
+    if (groups.length > 0 && includes.includes("checkers")) {
+        const groupsCheckers = await getGroupsCheckers(
+            database,
+            groups.map((group) => group.group_id),
+            subIncludes(includes, "checkers")
+        );
+        for (const group of groups) {
+            const checkersIndexes = groupsCheckers
+                .map((c, i) => i)
+                .filter((i) => ((groupsCheckers[i].group as Group).id ?? groupsCheckers[i].group) === group.group_id);
+            group.checkers = checkersIndexes.map((i) => groupsCheckers[i]);
+        }
+    }
+
     return groups.map((group) => ({
         id: group.group_id,
-        name: group.name
+        name: group.name,
+        services: group.services,
+        checkers: group.checkers
     }));
 };
 
