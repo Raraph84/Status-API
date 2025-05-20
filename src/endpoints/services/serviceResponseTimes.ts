@@ -3,6 +3,9 @@ import { Pool, RowDataPacket } from "mysql2/promise";
 import { getServices } from "../../resources";
 const config = getConfig(__dirname + "/../../..");
 
+const smokepingStartTime = new Date(2025, 3 - 1, 24, 2).getTime();
+const smokepingStartDay = Math.floor(smokepingStartTime / 1000 / 60 / 60 / 24);
+
 export const run = async (request: Request, database: Pool) => {
     let service;
     try {
@@ -24,7 +27,7 @@ export const run = async (request: Request, database: Pool) => {
         let statuses;
         try {
             [statuses] = await database.query<RowDataPacket[]>(
-                "SELECT * FROM services_daily_statuses WHERE service_id=? && checker_id=? && day>=?",
+                "SELECT * FROM services_daily_statuses WHERE service_id=? AND checker_id=? AND day>=?",
                 [service.id, config.dataCheckerId, startDay]
             );
         } catch (error) {
@@ -36,8 +39,8 @@ export const run = async (request: Request, database: Pool) => {
             let statuses;
             try {
                 [statuses] = await database.query<RowDataPacket[]>(
-                    "SELECT * FROM services_statuses WHERE service_id=? && checker_id=? && minute>=? && minute<?",
-                    [service.id, config.dataCheckerId, day * 24 * 60, (day + 1) * 24 * 60]
+                    "SELECT * FROM services_statuses WHERE service_id=? AND checker_id=? AND minute>=?",
+                    [service.id, config.dataCheckerId, day * 24 * 60]
                 );
             } catch (error) {
                 console.log(`SQL Error - ${__filename} - ${error}`);
@@ -67,16 +70,16 @@ export const run = async (request: Request, database: Pool) => {
         return responseTimes;
     };
 
-    if (service.type !== "server") {
-        let responseTimes;
-        try {
-            responseTimes = await getOldResponseTimes();
-        } catch (error) {
-            request.end(500, "Internal server error");
-            return;
-        }
+    let oldResponseTimes;
+    try {
+        oldResponseTimes = await getOldResponseTimes();
+    } catch (error) {
+        request.end(500, "Internal server error");
+        return;
+    }
 
-        request.end(200, { responseTimes });
+    if (service.type !== "server") {
+        request.end(200, { responseTimes: oldResponseTimes });
         return;
     }
 
@@ -84,7 +87,7 @@ export const run = async (request: Request, database: Pool) => {
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
             "SELECT * FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
-            [config.dataCheckerId, service.id, startDay * 24 * 60 * 6]
+            [config.dataCheckerId, service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10)]
         );
     } catch (error) {
         request.end(500, "Internal server error");
@@ -94,6 +97,11 @@ export const run = async (request: Request, database: Pool) => {
 
     const responseTimes = [];
     for (let currentDay = startDay; currentDay <= day; currentDay++) {
+        if (currentDay < smokepingStartDay) {
+            responseTimes.push(oldResponseTimes.find((reponseTime) => reponseTime.day === currentDay));
+            continue;
+        }
+
         const startTime = currentDay * 24 * 60 * 6;
         const endTime = (currentDay + 1) * 24 * 60 * 6;
 
