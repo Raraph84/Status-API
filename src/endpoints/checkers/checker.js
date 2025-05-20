@@ -10,18 +10,18 @@ module.exports.run = async (request, database) => {
 
     let checker;
     try {
-        checker = await getCheckers(database, [request.urlParams.checkerId], includes);
+        checker = (await getCheckers(database, [request.urlParams.checkerId], includes))[0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
     }
 
-    if (!checker[0][0]) {
+    if (!checker) {
         request.end(400, "This checker does not exist");
         return;
     }
 
-    request.end(200, checker[request.authenticated ? 0 : 1][0]);
+    request.end(200, checker);
 }
 
 module.exports.infos = {

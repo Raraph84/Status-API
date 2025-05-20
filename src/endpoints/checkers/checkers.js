@@ -16,7 +16,7 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    request.end(200, { checkers: checkers[request.authenticated ? 0 : 1] });
+    request.end(200, { checkers });
 }
 
 module.exports.infos = {

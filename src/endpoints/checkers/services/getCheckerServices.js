@@ -10,7 +10,7 @@ module.exports.run = async (request, database) => {
 
     let checker;
     try {
-        checker = (await getCheckers(database, [request.urlParams.checkerId]))[0][0];
+        checker = (await getCheckers(database, [request.urlParams.checkerId]))[0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -29,7 +29,7 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    request.end(200, { services: checkerServices[request.authenticated ? 0 : 1] });
+    request.end(200, { services: checkerServices });
 }
 
 module.exports.infos = {
