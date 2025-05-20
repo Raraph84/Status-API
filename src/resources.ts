@@ -359,10 +359,126 @@ const getCheckersServices = async (
     }));
 };
 
+const getGroups = async (database: Pool, groupId: number[] | null = null): Promise<Group[]> => {
+    const args = [];
+    let sql = "SELECT * FROM groups";
+    if (groupId) {
+        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " group_id IN (?)";
+        args.push(groupId);
+    }
+
+    let groups: any[];
+    try {
+        [groups] = await database.query<RowDataPacket[][]>(sql, args);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        throw new Error("Database error");
+    }
+
+    return groups.map((group) => ({
+        id: group.group_id,
+        name: group.name
+    }));
+};
+
+const getGroupsServices = async (
+    database: Pool,
+    groupId: number[] | null = null,
+    includes: string[] = []
+): Promise<GroupService[]> => {
+    const args = [];
+    let sql = "SELECT * FROM groups_services";
+    if (groupId) {
+        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " group_id IN (?)";
+        args.push(groupId);
+    }
+
+    let groupsServices: any[];
+    try {
+        [groupsServices] = await database.query<RowDataPacket[][]>(sql, args);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        throw new Error("Database error");
+    }
+
+    const groups =
+        groupsServices.length > 0 && includes.includes("group")
+            ? await getGroups(
+                  database,
+                  groupsServices.map((gs) => gs.group_id)
+              )
+            : null;
+    const services =
+        groupsServices.length > 0 && includes.includes("service")
+            ? await getServices(
+                  database,
+                  groupsServices.map((gs) => gs.service_id),
+                  subIncludes(includes, "service")
+              )
+            : [];
+
+    return groupsServices.map((gs) => ({
+        group: groups?.find((g) => g.id === gs.group_id) ?? gs.group_id,
+        service: services[0]?.find((s) => s.id === gs.service_id) ?? gs.service_id
+    }));
+};
+
+const getGroupsCheckers = async (
+    database: Pool,
+    groupId: number[] | null = null,
+    includes: string[] = []
+): Promise<GroupChecker[]> => {
+    const args = [];
+    let sql = "SELECT * FROM groups_checkers";
+    if (groupId) {
+        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " group_id IN (?)";
+        args.push(groupId);
+    }
+
+    let groupsCheckers: any[];
+    try {
+        [groupsCheckers] = await database.query<RowDataPacket[][]>(sql, args);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        throw new Error("Database error");
+    }
+
+    const groups =
+        groupsCheckers.length > 0 && includes.includes("group")
+            ? await getGroups(
+                  database,
+                  groupsCheckers.map((gc) => gc.group_id)
+              )
+            : null;
+    const checkers =
+        groupsCheckers.length > 0 && includes.includes("checker")
+            ? await getCheckers(
+                  database,
+                  groupsCheckers.map((gc) => gc.checker_id),
+                  subIncludes(includes, "checker")
+              )
+            : null;
+
+    return groupsCheckers.map((gc) => ({
+        group: groups?.find((g) => g.id === gc.group_id) ?? gc.group_id,
+        checker: checkers?.find((c) => c.id === gc.checker_id) ?? gc.checker_id
+    }));
+};
+
 const subIncludes = (includes: string[], name: string) =>
     includes.filter((include) => include.startsWith(name + ".")).map((include) => include.replace(name + ".", ""));
 
-export { getServices, getPages, getPagesSubPages, getPagesServices, getCheckers, getCheckersServices };
+export {
+    getServices,
+    getPages,
+    getPagesSubPages,
+    getPagesServices,
+    getCheckers,
+    getCheckersServices,
+    getGroups,
+    getGroupsServices,
+    getGroupsCheckers
+};
 
 export type PrivateService = {
     id: number;
@@ -433,4 +549,19 @@ export type Checker = {
 export type CheckerService = {
     checker: Checker | number;
     service: PrivateService | number;
+};
+
+export type Group = {
+    id: number;
+    name: string;
+};
+
+export type GroupService = {
+    group: Group | number;
+    service: PrivateService | number;
+};
+
+export type GroupChecker = {
+    group: Group | number;
+    checker: Checker | number;
 };
