@@ -2,7 +2,7 @@ import { Pool, RowDataPacket } from "mysql2/promise";
 import { getConfig } from "raraph84-lib";
 const config = getConfig(__dirname + "/..");
 
-const getServices = async (
+export const getServices = async (
     database: Pool,
     serviceId: number[] | null = null,
     includes: string[] = []
@@ -62,7 +62,7 @@ const getServices = async (
     ];
 };
 
-const getPages = async (
+export const getPages = async (
     database: Pool,
     pageId: number[] | null = null,
     shortName: string[] | null = null,
@@ -154,7 +154,7 @@ const getPages = async (
     ];
 };
 
-const getPagesSubPages = async (
+export const getPagesSubPages = async (
     database: Pool,
     pageId: number[] | null = null,
     includes: string[] = []
@@ -211,7 +211,7 @@ const getPagesSubPages = async (
     ];
 };
 
-const getPagesServices = async (
+export const getPagesServices = async (
     database: Pool,
     pageId: number[] | null = null,
     includes: string[] = []
@@ -268,7 +268,7 @@ const getPagesServices = async (
     ];
 };
 
-const getCheckers = async (
+export const getCheckers = async (
     database: Pool,
     checkerId: number[] | null = null,
     includes: string[] = []
@@ -316,7 +316,7 @@ const getCheckers = async (
     }));
 };
 
-const getCheckersServices = async (
+export const getCheckersServices = async (
     database: Pool,
     checkerId: number[] | null = null,
     includes: string[] = []
@@ -359,7 +359,7 @@ const getCheckersServices = async (
     }));
 };
 
-const getGroups = async (database: Pool, groupId: number[] | null = null): Promise<Group[]> => {
+export const getGroups = async (database: Pool, groupId: number[] | null = null): Promise<Group[]> => {
     const args = [];
     let sql = "SELECT * FROM groups";
     if (groupId) {
@@ -381,7 +381,7 @@ const getGroups = async (database: Pool, groupId: number[] | null = null): Promi
     }));
 };
 
-const getGroupsServices = async (
+export const getGroupsServices = async (
     database: Pool,
     groupId: number[] | null = null,
     includes: string[] = []
@@ -423,7 +423,7 @@ const getGroupsServices = async (
     }));
 };
 
-const getGroupsCheckers = async (
+export const getGroupsCheckers = async (
     database: Pool,
     groupId: number[] | null = null,
     includes: string[] = []
@@ -467,18 +467,6 @@ const getGroupsCheckers = async (
 
 const subIncludes = (includes: string[], name: string) =>
     includes.filter((include) => include.startsWith(name + ".")).map((include) => include.replace(name + ".", ""));
-
-export {
-    getServices,
-    getPages,
-    getPagesSubPages,
-    getPagesServices,
-    getCheckers,
-    getCheckersServices,
-    getGroups,
-    getGroupsServices,
-    getGroupsCheckers
-};
 
 export type PrivateService = {
     id: number;

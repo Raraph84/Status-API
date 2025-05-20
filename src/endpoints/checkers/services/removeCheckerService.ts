@@ -1,14 +1,11 @@
-const { getCheckers, getServices } = require("../../../resources");
+import { Request } from "raraph84-lib";
+import { Pool } from "mysql2/promise";
+import { getCheckers, getServices } from "../../../resources";
 
-/**
- * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql2/promise").Pool} database 
- */
-module.exports.run = async (request, database) => {
-
+export const run = async (request: Request, database: Pool) => {
     let checker;
     try {
-        checker = (await getCheckers(database, [request.urlParams.checkerId]))[0];
+        checker = (await getCheckers(database, [parseInt(request.urlParams.checkerId)]))[0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -21,7 +18,7 @@ module.exports.run = async (request, database) => {
 
     let service;
     try {
-        service = (await getServices(database, [request.urlParams.serviceId]))[0][0];
+        service = (await getServices(database, [parseInt(request.urlParams.serviceId)]))[0][0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -33,7 +30,10 @@ module.exports.run = async (request, database) => {
     }
 
     try {
-        await database.query("INSERT INTO checkers_services (checker_id, service_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE service_id=service_id", [checker.id, service.id]);
+        await database.query("DELETE FROM checkers_services WHERE checker_id=? && service_id=?", [
+            checker.id,
+            service.id
+        ]);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         request.end(500, "Internal server error");
@@ -41,10 +41,10 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(204);
-}
+};
 
-module.exports.infos = {
+export const infos = {
     path: "/checkers/:checkerId/services/:serviceId",
-    method: "POST",
+    method: "DELETE",
     requiresAuth: true
-}
+};
