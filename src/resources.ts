@@ -272,7 +272,7 @@ const getCheckers = async (
     database: Pool,
     checkerId: number[] | null = null,
     includes: string[] = []
-): Promise<[PrivateChecker[], PublicChecker[]]> => {
+): Promise<Checker[]> => {
     const args = [];
     let sql = "SELECT * FROM checkers";
     if (checkerId) {
@@ -295,44 +295,32 @@ const getCheckers = async (
             subIncludes(includes, "services")
         );
         for (const checker of checkers) {
-            const servicesIndexes = checkersServices[0]
+            const servicesIndexes = checkersServices
                 .map((s, i) => i)
                 .filter(
                     (i) =>
-                        ((checkersServices[0][i].checker as PrivateChecker).id ?? checkersServices[0][i].checker) ===
+                        ((checkersServices[i].checker as Checker).id ?? checkersServices[i].checker) ===
                         checker.checker_id
                 );
-            checker.services = [
-                servicesIndexes.map((i) => checkersServices[0][i]),
-                servicesIndexes.map((i) => checkersServices[1][i])
-            ];
+            checker.services = servicesIndexes.map((i) => checkersServices[i]);
         }
     }
 
-    return [
-        checkers.map((checker) => ({
-            id: checker.checker_id,
-            name: checker.name,
-            description: checker.description,
-            location: checker.location,
-            checkSecond: checker.check_second,
-            hidden: !!checker.hidden,
-            services: checker.services ? checker.services[0] : undefined
-        })),
-        checkers.map((checker) => ({
-            id: checker.checker_id,
-            name: checker.name,
-            location: checker.location,
-            services: checker.services ? checker.services[1] : undefined
-        }))
-    ];
+    return checkers.map((checker) => ({
+        id: checker.checker_id,
+        name: checker.name,
+        description: checker.description,
+        location: checker.location,
+        checkSecond: checker.check_second,
+        services: checker.services
+    }));
 };
 
 const getCheckersServices = async (
     database: Pool,
     checkerId: number[] | null = null,
     includes: string[] = []
-): Promise<[PrivateCheckerService[], PublicCheckerService[]]> => {
+): Promise<CheckerService[]> => {
     const args = [];
     let sql = "SELECT * FROM checkers_services";
     if (checkerId) {
@@ -355,7 +343,7 @@ const getCheckersServices = async (
                   checkersServices.map((checkerService) => checkerService.checker_id),
                   subIncludes(includes, "checker")
               )
-            : [];
+            : null;
     const services =
         checkersServices.length > 0 && includes.includes("service")
             ? await getServices(
@@ -365,20 +353,10 @@ const getCheckersServices = async (
               )
             : [];
 
-    return [
-        checkersServices.map((checkerService) => ({
-            checker:
-                checkers[0]?.find((checker) => checker.id === checkerService.checker_id) ?? checkerService.checker_id,
-            service:
-                services[0]?.find((service) => service.id === checkerService.service_id) ?? checkerService.service_id
-        })),
-        checkersServices.map((checkerService) => ({
-            checker:
-                checkers[1]?.find((checker) => checker.id === checkerService.checker_id) ?? checkerService.checker_id,
-            service:
-                services[1]?.find((service) => service.id === checkerService.service_id) ?? checkerService.service_id
-        }))
-    ];
+    return checkersServices.map((checkerService) => ({
+        checker: checkers?.find((checker) => checker.id === checkerService.checker_id) ?? checkerService.checker_id,
+        service: services[0]?.find((service) => service.id === checkerService.service_id) ?? checkerService.service_id
+    }));
 };
 
 const subIncludes = (includes: string[], name: string) =>
@@ -444,27 +422,15 @@ export type PublicPageService = {
     displayName: string;
 };
 
-export type PrivateChecker = {
+export type Checker = {
     id: number;
     name: string;
     description: string;
     location: string;
     checkSecond: number;
-    hidden: boolean;
 };
 
-export type PublicChecker = {
-    id: number;
-    name: string;
-    location: string;
-};
-
-export type PrivateCheckerService = {
-    checker: PrivateChecker | number;
+export type CheckerService = {
+    checker: Checker | number;
     service: PrivateService | number;
-};
-
-export type PublicCheckerService = {
-    checker: PublicChecker | null;
-    service: PublicService | null;
 };
