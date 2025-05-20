@@ -359,7 +359,11 @@ export const getCheckersServices = async (
     }));
 };
 
-export const getGroups = async (database: Pool, groupId: number[] | null = null): Promise<Group[]> => {
+export const getGroups = async (
+    database: Pool,
+    groupId: number[] | null = null,
+    includes: string[] = []
+): Promise<Group[]> => {
     const args = [];
     let sql = "SELECT * FROM groups";
     if (groupId) {
@@ -405,7 +409,8 @@ export const getGroupsServices = async (
         groupsServices.length > 0 && includes.includes("group")
             ? await getGroups(
                   database,
-                  groupsServices.map((gs) => gs.group_id)
+                  groupsServices.map((gs) => gs.group_id),
+                  subIncludes(includes, "group")
               )
             : null;
     const services =
@@ -447,7 +452,8 @@ export const getGroupsCheckers = async (
         groupsCheckers.length > 0 && includes.includes("group")
             ? await getGroups(
                   database,
-                  groupsCheckers.map((gc) => gc.group_id)
+                  groupsCheckers.map((gc) => gc.group_id),
+                  subIncludes(includes, "group")
               )
             : null;
     const checkers =

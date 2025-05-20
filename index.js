@@ -22,7 +22,9 @@ tasks.addTask(async (resolve, reject) => {
     resolve();
 }, (resolve) => database.end().then(() => resolve()));
 
-const endpointsFiles = readdirSync(join(__dirname, "src", "endpoints"), { recursive: true }).filter((file) => file.endsWith(".js"))
+const endpointsFiles = readdirSync(join(__dirname, "src", "endpoints"), { recursive: true })
+    .filter((file) => file.endsWith(".js") || file.endsWith(".ts"))
+    .filter((file, i, files) => file.endsWith(".js") || !files.includes(file.replace(".ts", ".js")))
     .map((endpoint) => require(join(__dirname, "src", "endpoints", endpoint)));
 
 const api = new HttpServer();
