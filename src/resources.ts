@@ -1,5 +1,5 @@
 import { Pool, RowDataPacket } from "mysql2/promise";
-const { getConfig } = require("raraph84-lib");
+import { getConfig } from "raraph84-lib";
 const config = getConfig(__dirname + "/..");
 
 const getServices = async (

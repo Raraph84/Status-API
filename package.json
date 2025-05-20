@@ -16,7 +16,7 @@
     "@types/node": "^22.15.19",
     "dotenv": "^16.5.0",
     "mysql2": "^3.14.1",
-    "raraph84-lib": "^2.19.0",
+    "raraph84-lib": "^2.20.0",
     "typescript": "^5.8.3"
   },
   "devDependencies": {
