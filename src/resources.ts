@@ -43,22 +43,26 @@ export const getServices = async (
     }
 
     return [
-        services.map((service) => ({
-            id: service.service_id,
-            type: service.type,
-            name: service.name,
-            host: service.host,
-            protocol: service.protocol,
-            alert: !!service.alert,
-            disabled: !!service.disabled,
-            online: service?.online
-        })),
-        services.map((service) => ({
-            id: service.service_id,
-            name: service.name,
-            disabled: !!service.disabled,
-            online: service?.online
-        }))
+        services.map(
+            (service): PrivateService => ({
+                id: service.service_id,
+                type: service.type,
+                name: service.name,
+                host: service.host,
+                protocol: service.protocol,
+                alert: !!service.alert,
+                disabled: !!service.disabled,
+                online: service?.online
+            })
+        ),
+        services.map(
+            (service): PublicService => ({
+                id: service.service_id,
+                name: service.name,
+                disabled: !!service.disabled,
+                online: service?.online
+            })
+        )
     ];
 };
 
@@ -133,24 +137,28 @@ export const getPages = async (
     }
 
     return [
-        pages.map((page) => ({
-            id: page.page_id,
-            shortName: page.short_name,
-            title: page.title,
-            url: page.url,
-            logoUrl: page.logo_url,
-            domain: page.domain,
-            subPages: page.subPages ? page.subPages[0] : undefined,
-            services: page.services ? page.services[0] : undefined
-        })),
-        pages.map((page) => ({
-            shortName: page.short_name,
-            title: page.title,
-            url: page.url,
-            logoUrl: page.logo_url,
-            subPages: page.subPages ? page.subPages[1] : undefined,
-            services: page.services ? page.services[1] : undefined
-        }))
+        pages.map(
+            (page): PrivatePage => ({
+                id: page.page_id,
+                shortName: page.short_name,
+                title: page.title,
+                url: page.url,
+                logoUrl: page.logo_url,
+                domain: page.domain,
+                subPages: page.subPages ? page.subPages[0] : undefined,
+                services: page.services ? page.services[0] : undefined
+            })
+        ),
+        pages.map(
+            (page): PublicPage => ({
+                shortName: page.short_name,
+                title: page.title,
+                url: page.url,
+                logoUrl: page.logo_url,
+                subPages: page.subPages ? page.subPages[1] : undefined,
+                services: page.services ? page.services[1] : undefined
+            })
+        )
     ];
 };
 
@@ -196,18 +204,23 @@ export const getPagesSubPages = async (
             : [];
 
     return [
-        pagesSubPages.map((pagesSubPage) => ({
-            page: pages[0]?.find((page) => page.id === pagesSubPage.page_id) ?? pagesSubPage.page_id,
-            subPage: subPages[0]?.find((subPage) => subPage.id === pagesSubPage.subpage_id) ?? pagesSubPage.subpage_id
-        })),
-        pagesSubPages.map((pagesSubPage) => ({
-            page: includes.includes("page")
-                ? pages[1][pages[0].findIndex((page) => page.id === pagesSubPage.page_id)]
-                : null,
-            subPage: includes.includes("subpage")
-                ? subPages[1][subPages[0].findIndex((page) => page.id === pagesSubPage.subpage_id)]
-                : null
-        }))
+        pagesSubPages.map(
+            (pagesSubPage): PrivatePageSubPage => ({
+                page: pages[0]?.find((page) => page.id === pagesSubPage.page_id) ?? pagesSubPage.page_id,
+                subPage:
+                    subPages[0]?.find((subPage) => subPage.id === pagesSubPage.subpage_id) ?? pagesSubPage.subpage_id
+            })
+        ),
+        pagesSubPages.map(
+            (pagesSubPage): PublicPageSubPage => ({
+                page: includes.includes("page")
+                    ? pages[1][pages[0].findIndex((page) => page.id === pagesSubPage.page_id)]
+                    : null,
+                subPage: includes.includes("subpage")
+                    ? subPages[1][subPages[0].findIndex((page) => page.id === pagesSubPage.subpage_id)]
+                    : null
+            })
+        )
     ];
 };
 
@@ -251,20 +264,26 @@ export const getPagesServices = async (
             : [];
 
     return [
-        pagesServices.map((pageService) => ({
-            page: pages[0]?.find((page) => page.id === pageService.page_id) ?? pageService.page_id,
-            service: services[0]?.find((service) => service.id === pageService.service_id) ?? pageService.service_id,
-            position: pageService.position,
-            displayName: pageService.display_name
-        })),
-        pagesServices.map((pageService) => ({
-            page: includes.includes("page")
-                ? pages[1][pages[0].findIndex((page) => page.id === pageService.page_id)]
-                : null,
-            service: services[1]?.find((service) => service.id === pageService.service_id) ?? pageService.service_id,
-            position: pageService.position,
-            displayName: pageService.display_name
-        }))
+        pagesServices.map(
+            (pageService): PrivatePageService => ({
+                page: pages[0]?.find((page) => page.id === pageService.page_id) ?? pageService.page_id,
+                service:
+                    services[0]?.find((service) => service.id === pageService.service_id) ?? pageService.service_id,
+                position: pageService.position,
+                displayName: pageService.display_name
+            })
+        ),
+        pagesServices.map(
+            (pageService): PublicPageService => ({
+                page: includes.includes("page")
+                    ? pages[1][pages[0].findIndex((page) => page.id === pageService.page_id)]
+                    : null,
+                service:
+                    services[1]?.find((service) => service.id === pageService.service_id) ?? pageService.service_id,
+                position: pageService.position,
+                displayName: pageService.display_name
+            })
+        )
     ];
 };
 
@@ -288,13 +307,15 @@ export const getCheckers = async (
         throw new Error("Database error");
     }
 
-    return checkers.map((checker) => ({
-        id: checker.checker_id,
-        name: checker.name,
-        description: checker.description,
-        location: checker.location,
-        checkSecond: checker.check_second
-    }));
+    return checkers.map(
+        (checker): Checker => ({
+            id: checker.checker_id,
+            name: checker.name,
+            description: checker.description,
+            location: checker.location,
+            checkSecond: checker.check_second
+        })
+    );
 };
 
 export const getGroups = async (
@@ -345,12 +366,14 @@ export const getGroups = async (
         }
     }
 
-    return groups.map((group) => ({
-        id: group.group_id,
-        name: group.name,
-        services: group.services,
-        checkers: group.checkers
-    }));
+    return groups.map(
+        (group): Group => ({
+            id: group.group_id,
+            name: group.name,
+            services: group.services,
+            checkers: group.checkers
+        })
+    );
 };
 
 export const getGroupsServices = async (
@@ -390,10 +413,12 @@ export const getGroupsServices = async (
               )
             : [];
 
-    return groupsServices.map((gs) => ({
-        group: groups?.find((g) => g.id === gs.group_id) ?? gs.group_id,
-        service: services[0]?.find((s) => s.id === gs.service_id) ?? gs.service_id
-    }));
+    return groupsServices.map(
+        (gs): GroupService => ({
+            group: groups?.find((g) => g.id === gs.group_id) ?? gs.group_id,
+            service: services[0]?.find((s) => s.id === gs.service_id) ?? gs.service_id
+        })
+    );
 };
 
 export const getGroupsCheckers = async (
@@ -433,10 +458,12 @@ export const getGroupsCheckers = async (
               )
             : null;
 
-    return groupsCheckers.map((gc) => ({
-        group: groups?.find((g) => g.id === gc.group_id) ?? gc.group_id,
-        checker: checkers?.find((c) => c.id === gc.checker_id) ?? gc.checker_id
-    }));
+    return groupsCheckers.map(
+        (gc): GroupChecker => ({
+            group: groups?.find((g) => g.id === gc.group_id) ?? gc.group_id,
+            checker: checkers?.find((c) => c.id === gc.checker_id) ?? gc.checker_id
+        })
+    );
 };
 
 const subIncludes = (includes: string[], name: string) =>
@@ -444,16 +471,20 @@ const subIncludes = (includes: string[], name: string) =>
 
 export type PrivateService = {
     id: number;
+    type: "website" | "api" | "gateway" | "minecraft" | "server";
     name: string;
+    host: string;
+    protocol: 0 | 4 | 6;
     disabled: boolean;
-    online?: Boolean;
+    alert: boolean;
+    online?: boolean;
 };
 
 export type PublicService = {
     id: number;
     name: string;
     disabled: boolean;
-    online?: Boolean;
+    online?: boolean;
 };
 
 export type PrivatePage = {
@@ -511,6 +542,8 @@ export type Checker = {
 export type Group = {
     id: number;
     name: string;
+    services?: GroupService[];
+    checkers?: GroupChecker[];
 };
 
 export type GroupService = {
