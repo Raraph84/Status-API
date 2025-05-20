@@ -1,13 +1,12 @@
+import { Pool, RowDataPacket } from "mysql2/promise";
 const { getConfig } = require("raraph84-lib");
 const config = getConfig(__dirname + "/..");
 
-/**
- * @param {import("mysql2/promise").Pool} database
- * @param {number[]} serviceId
- * @param {string[]} includes
- * @returns {Promise<[privateService[], publicService[]]>}
- */
-const getServices = async (database, serviceId = null, includes = []) => {
+const getServices = async (
+    database: Pool,
+    serviceId: number[] | null = null,
+    includes: string[] = []
+): Promise<[PrivateService[], PublicService[]]> => {
     const args = [];
     let sql = "SELECT * FROM services";
     if (serviceId) {
@@ -15,9 +14,9 @@ const getServices = async (database, serviceId = null, includes = []) => {
         args.push(serviceId);
     }
 
-    let services;
+    let services: any[];
     try {
-        [services] = await database.query(sql, args);
+        [services] = await database.query<RowDataPacket[][]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -26,9 +25,9 @@ const getServices = async (database, serviceId = null, includes = []) => {
     if (services.length > 0 && includes.includes("online")) {
         await Promise.all(
             services.map(async (service) => {
-                let lastEvent;
+                let lastEvent: any;
                 try {
-                    [lastEvent] = await database.query(
+                    [lastEvent] = await database.query<RowDataPacket[][]>(
                         "SELECT * FROM services_events WHERE service_id=? && checker_id=? ORDER BY minute DESC LIMIT 1",
                         [service.service_id, config.dataCheckerId]
                     );
@@ -63,15 +62,13 @@ const getServices = async (database, serviceId = null, includes = []) => {
     ];
 };
 
-/**
- * @param {import("mysql2/promise").Pool} database
- * @param {number[]} pageId
- * @param {string[]} shortName
- * @param {string[]} domain
- * @param {string[]} includes
- * @returns {Promise<[privatePage[], publicPage[]]>}
- */
-const getPages = async (database, pageId = null, shortName = null, domain = null, includes = []) => {
+const getPages = async (
+    database: Pool,
+    pageId: number[] | null = null,
+    shortName: string[] | null = null,
+    domain: string[] | null = null,
+    includes: string[] = []
+): Promise<[PrivatePage[], PublicPage[]]> => {
     const args = [];
     let sql = "SELECT * FROM pages";
     if (pageId) {
@@ -87,9 +84,9 @@ const getPages = async (database, pageId = null, shortName = null, domain = null
         args.push(domain);
     }
 
-    let pages;
+    let pages: any[];
     try {
-        [pages] = await database.query(sql, args);
+        [pages] = await database.query<RowDataPacket[][]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -104,7 +101,9 @@ const getPages = async (database, pageId = null, shortName = null, domain = null
         for (const page of pages) {
             const servicesIndexes = pagesServices[0]
                 .map((s, i) => i)
-                .filter((i) => (pagesServices[0][i].page.id ?? pagesServices[0][i].page) === page.page_id);
+                .filter(
+                    (i) => ((pagesServices[0][i].page as PrivatePage).id ?? pagesServices[0][i].page) === page.page_id
+                );
             page.services = [
                 servicesIndexes.map((i) => pagesServices[0][i]),
                 servicesIndexes.map((i) => pagesServices[1][i])
@@ -123,7 +122,9 @@ const getPages = async (database, pageId = null, shortName = null, domain = null
         for (const page of pages) {
             const subPagesIndexes = pagesSubPages[0]
                 .map((s, i) => i)
-                .filter((i) => (pagesSubPages[0][i].page.id ?? pagesSubPages[0][i].page) === page.page_id);
+                .filter(
+                    (i) => ((pagesSubPages[0][i].page as PrivatePage).id ?? pagesSubPages[0][i].page) === page.page_id
+                );
             page.subPages = [
                 subPagesIndexes.map((i) => pagesSubPages[0][i]),
                 subPagesIndexes.map((i) => pagesSubPages[1][i])
@@ -153,13 +154,11 @@ const getPages = async (database, pageId = null, shortName = null, domain = null
     ];
 };
 
-/**
- * @param {import("mysql2/promise").Pool} database
- * @param {number[]} pageId
- * @param {string[]} includes
- * @returns {Promise<[privatePageSubPage[], publicPageSubPage[]]>}
- */
-const getPagesSubPages = async (database, pageId = null, includes = []) => {
+const getPagesSubPages = async (
+    database: Pool,
+    pageId: number[] | null = null,
+    includes: string[] = []
+): Promise<[PrivatePageSubPage[], PublicPageSubPage[]]> => {
     const args = [];
     let sql = "SELECT * FROM pages_subpages";
     if (pageId) {
@@ -167,9 +166,9 @@ const getPagesSubPages = async (database, pageId = null, includes = []) => {
         args.push(pageId);
     }
 
-    let pagesSubPages;
+    let pagesSubPages: any[];
     try {
-        [pagesSubPages] = await database.query(sql, args);
+        [pagesSubPages] = await database.query<RowDataPacket[][]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -212,13 +211,11 @@ const getPagesSubPages = async (database, pageId = null, includes = []) => {
     ];
 };
 
-/**
- * @param {import("mysql2/promise").Pool} database
- * @param {number[]} pageId
- * @param {string[]} includes
- * @returns {Promise<[privatePageService[], publicPageService[]]>}
- */
-const getPagesServices = async (database, pageId = null, includes = []) => {
+const getPagesServices = async (
+    database: Pool,
+    pageId: number[] | null = null,
+    includes: string[] = []
+): Promise<[PrivatePageService[], PublicPageService[]]> => {
     const args = [];
     let sql = "SELECT * FROM pages_services";
     if (pageId) {
@@ -226,9 +223,9 @@ const getPagesServices = async (database, pageId = null, includes = []) => {
         args.push(pageId);
     }
 
-    let pagesServices;
+    let pagesServices: any[];
     try {
-        [pagesServices] = await database.query(sql, args);
+        [pagesServices] = await database.query<RowDataPacket[][]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -271,13 +268,11 @@ const getPagesServices = async (database, pageId = null, includes = []) => {
     ];
 };
 
-/**
- * @param {import("mysql2/promise").Pool} database
- * @param {number[]} checkerId
- * @param {string[]} includes
- * @returns {Promise<[privateChecker[], publicChecker[]]>}
- */
-const getCheckers = async (database, checkerId = null, includes = []) => {
+const getCheckers = async (
+    database: Pool,
+    checkerId: number[] | null = null,
+    includes: string[] = []
+): Promise<[PrivateChecker[], PublicChecker[]]> => {
     const args = [];
     let sql = "SELECT * FROM checkers";
     if (checkerId) {
@@ -285,9 +280,9 @@ const getCheckers = async (database, checkerId = null, includes = []) => {
         args.push(checkerId);
     }
 
-    let checkers;
+    let checkers: any[];
     try {
-        [checkers] = await database.query(sql, args);
+        [checkers] = await database.query<RowDataPacket[][]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -303,7 +298,9 @@ const getCheckers = async (database, checkerId = null, includes = []) => {
             const servicesIndexes = checkersServices[0]
                 .map((s, i) => i)
                 .filter(
-                    (i) => (checkersServices[0][i].checker.id ?? checkersServices[0][i].checker) === checker.checker_id
+                    (i) =>
+                        ((checkersServices[0][i].checker as PrivateChecker).id ?? checkersServices[0][i].checker) ===
+                        checker.checker_id
                 );
             checker.services = [
                 servicesIndexes.map((i) => checkersServices[0][i]),
@@ -331,13 +328,11 @@ const getCheckers = async (database, checkerId = null, includes = []) => {
     ];
 };
 
-/**
- * @param {import("mysql2/promise").Pool} database
- * @param {number[]} checkerId
- * @param {string[]} includes
- * @returns {Promise<[privateCheckerService[], publicCheckerService[]]>}
- */
-const getCheckersServices = async (database, checkerId = null, includes = []) => {
+const getCheckersServices = async (
+    database: Pool,
+    checkerId: number[] | null = null,
+    includes: string[] = []
+): Promise<[PrivateCheckerService[], PublicCheckerService[]]> => {
     const args = [];
     let sql = "SELECT * FROM checkers_services";
     if (checkerId) {
@@ -345,9 +340,9 @@ const getCheckersServices = async (database, checkerId = null, includes = []) =>
         args.push(checkerId);
     }
 
-    let checkersServices;
+    let checkersServices: any[];
     try {
-        [checkersServices] = await database.query(sql, args);
+        [checkersServices] = await database.query<RowDataPacket[][]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -386,97 +381,90 @@ const getCheckersServices = async (database, checkerId = null, includes = []) =>
     ];
 };
 
-const subIncludes = (includes, name) =>
+const subIncludes = (includes: string[], name: string) =>
     includes.filter((include) => include.startsWith(name + ".")).map((include) => include.replace(name + ".", ""));
 
-module.exports = { getServices, getPages, getPagesSubPages, getPagesServices, getCheckers, getCheckersServices };
+export { getServices, getPages, getPagesSubPages, getPagesServices, getCheckers, getCheckersServices };
 
-/**
- * @typedef {{
- *     id: number;
- *     name: string;
- *     disabled: boolean;
- *     online?: boolean;
- * }} privateService
- *
- * @typedef {{
- *     id: number;
- *     name: string;
- *     disabled: boolean;
- *     online?: boolean;
- * }} publicService
- *
- *
- * @typedef {{
- *     id: number;
- *     shortName: string;
- *     title: string;
- *     url: string;
- *     logoUrl: string;
- *     domain: string|null;
- *     subPages?: privatePageSubPage[];
- *     services?: privatePageService[];
- * }} privatePage
- *
- * @typedef {{
- *     shortName: string;
- *     title: string;
- *     url: string;
- *     logoUrl: string;
- *     subPages?: publicPageSubPage[];
- *     services?: publicPageService[];
- * }} publicPage
- *
- *
- * @typedef {{
- *     page: privatePage|number;
- *     subPage: privatePage|number;
- * }} privatePageSubPage
- *
- * @typedef {{
- *     page: publicPage|null;
- *     subPage: publicPage|null;
- * }} publicPageSubPage
- *
- *
- * @typedef {{
- *     page: privatePage|number;
- *     service: privateService|number;
- *     position: number;
- *     displayName: string;
- * }} privatePageService
- *
- * @typedef {{
- *     page: publicPage|null;
- *     service: publicService|number;
- *     position: number;
- *     displayName: string;
- * }} publicPageService
- *
- *
- * @typedef {{
- *     id: number;
- *     name: string;
- *     description: string;
- *     location: string;
- *     checkSecond: number;
- *     hidden: boolean;
- * }} privateChecker
- *
- * @typedef {{
- *     id: number;
- *     name: string;
- *     location: string;
- * }} publicChecker
- *
- *
- * @typedef {{
- *     checker: privateChecker|number;
- *     service: privateService|number;
- * }} privateCheckerService
- *
- * @typedef {{
- *     checker: publicChecker|null;
- *     service: publicService|null;
- * }} publicCheckerService
- */
+export type PrivateService = {
+    id: number;
+    name: string;
+    disabled: boolean;
+    online?: Boolean;
+};
+
+export type PublicService = {
+    id: number;
+    name: string;
+    disabled: boolean;
+    online?: Boolean;
+};
+
+export type PrivatePage = {
+    id: number;
+    shortName: string;
+    title: string;
+    url: string;
+    logoUrl: string;
+    domain: string | null;
+    subPages?: PrivatePageSubPage[];
+    services?: PrivatePageService[];
+};
+
+export type PublicPage = {
+    shortName: string;
+    title: string;
+    url: string;
+    logoUrl: string;
+    subPages?: PublicPageSubPage[];
+    services?: PublicPageService[];
+};
+
+export type PrivatePageSubPage = {
+    page: PrivatePage | number;
+    subPage: PrivatePage | number;
+};
+
+export type PublicPageSubPage = {
+    page: PublicPage | null;
+    subPage: PublicPage | null;
+};
+
+export type PrivatePageService = {
+    page: PrivatePage | number;
+    service: PrivateService | number;
+    position: number;
+    displayName: string;
+};
+
+export type PublicPageService = {
+    page: PublicPage | null;
+    service: PublicService | number;
+    position: number;
+    displayName: string;
+};
+
+export type PrivateChecker = {
+    id: number;
+    name: string;
+    description: string;
+    location: string;
+    checkSecond: number;
+    hidden: boolean;
+};
+
+export type PublicChecker = {
+    id: number;
+    name: string;
+    location: string;
+};
+
+export type PrivateCheckerService = {
+    checker: PrivateChecker | number;
+    service: PrivateService | number;
+};
+
+export type PublicCheckerService = {
+    checker: PublicChecker | null;
+    service: PublicService | null;
+};
