@@ -18,53 +18,90 @@ export const run = async (request: Request, database: Pool) => {
     }
 
     const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
+    const startDay = day - 30 * 3 + 1;
 
-    let statuses;
-    try {
-        [statuses] = await database.query<RowDataPacket[]>(
-            "SELECT * FROM services_daily_statuses WHERE service_id=? && checker_id=? && day>=?",
-            [service.id, config.dataCheckerId, day - 30 * 3 + 1]
-        );
-    } catch (error) {
-        request.end(500, "Internal server error");
-        console.log(`SQL Error - ${__filename} - ${error}`);
-        return;
+    if (service.type !== "server") {
+        let statuses;
+        try {
+            [statuses] = await database.query<RowDataPacket[]>(
+                "SELECT * FROM services_daily_statuses WHERE service_id=? && checker_id=? && day>=?",
+                [service.id, config.dataCheckerId, startDay]
+            );
+        } catch (error) {
+            request.end(500, "Internal server error");
+            console.log(`SQL Error - ${__filename} - ${error}`);
+            return;
+        }
+
+        const getTodayResponseTime = async () => {
+            const [statuses] = await database.query<RowDataPacket[]>(
+                "SELECT * FROM services_statuses WHERE service_id=? && checker_id=? && minute>=? && minute<?",
+                [service.id, config.dataCheckerId, day * 24 * 60, (day + 1) * 24 * 60]
+            );
+
+            const onlineStatuses = statuses.filter((status) => status.online);
+            return onlineStatuses.length > 0
+                ? Math.round(
+                      (onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) / onlineStatuses.length) *
+                          10
+                  ) / 10
+                : null;
+        };
+
+        let todayResponseTime;
+        try {
+            todayResponseTime = await getTodayResponseTime();
+        } catch (error) {
+            request.end(500, "Internal server error");
+            console.log(`SQL Error - ${__filename} - ${error}`);
+            return;
+        }
+
+        statuses.push({ day, response_time: todayResponseTime } as RowDataPacket);
+
+        const responseTimes = [];
+        for (let currentDay = startDay; currentDay <= day; currentDay++) {
+            responseTimes.push({
+                day: currentDay,
+                responseTime: statuses.find((status) => status.day === currentDay)?.response_time ?? null
+            });
+        }
+
+        request.end(200, { responseTimes });
+    } else {
+        let smokeping;
+        try {
+            [smokeping] = await database.query<RowDataPacket[]>(
+                "SELECT * FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
+                [config.dataCheckerId, service.id, startDay * 24 * 60 * 6]
+            );
+        } catch (error) {
+            request.end(500, "Internal server error");
+            console.log(`SQL Error - ${__filename} - ${error}`);
+            return;
+        }
+
+        const responseTimes = [];
+        for (let currentDay = startDay; currentDay <= day; currentDay++) {
+            const startTime = currentDay * 24 * 60 * 6;
+            const endTime = (currentDay + 1) * 24 * 60 * 6;
+
+            let sum = 0;
+            let count = 0;
+            for (const ping of smokeping) {
+                if (ping.start_time < startTime || !ping.med_response_time) continue;
+                if (ping.start_time >= endTime) break;
+                const c = ping.sent - (ping.lost ?? 0);
+                sum += ping.med_response_time * c;
+                count += c;
+            }
+
+            const responseTime = count > 0 ? Math.round(sum / count) / 100 : null;
+            responseTimes.push({ day: currentDay, responseTime });
+        }
+
+        request.end(200, { responseTimes });
     }
-
-    const getTodayResponseTime = async () => {
-        const [statuses] = await database.query<RowDataPacket[]>(
-            "SELECT * FROM services_statuses WHERE service_id=? && checker_id=? && minute>=? && minute<?",
-            [service.id, config.dataCheckerId, day * 24 * 60, (day + 1) * 24 * 60]
-        );
-
-        const onlineStatuses = statuses.filter((status) => status.online);
-        return onlineStatuses.length > 0
-            ? Math.round(
-                  (onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) / onlineStatuses.length) * 10
-              ) / 10
-            : null;
-    };
-
-    let todayResponseTime;
-    try {
-        todayResponseTime = await getTodayResponseTime();
-    } catch (error) {
-        request.end(500, "Internal server error");
-        console.log(`SQL Error - ${__filename} - ${error}`);
-        return;
-    }
-
-    statuses.push({ day, response_time: todayResponseTime } as RowDataPacket);
-
-    const responseTimes = [];
-    for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
-        responseTimes.push({
-            day: currentDay,
-            responseTime: statuses.find((status) => status.day === currentDay)?.response_time ?? null
-        });
-    }
-
-    request.end(200, { responseTimes });
 };
 
 export const infos = {
