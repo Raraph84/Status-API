@@ -288,74 +288,12 @@ export const getCheckers = async (
         throw new Error("Database error");
     }
 
-    if (checkers.length > 0 && includes.includes("services")) {
-        const checkersServices = await getCheckersServices(
-            database,
-            checkers.map((checker) => checker.checker_id),
-            subIncludes(includes, "services")
-        );
-        for (const checker of checkers) {
-            const servicesIndexes = checkersServices
-                .map((s, i) => i)
-                .filter(
-                    (i) =>
-                        ((checkersServices[i].checker as Checker).id ?? checkersServices[i].checker) ===
-                        checker.checker_id
-                );
-            checker.services = servicesIndexes.map((i) => checkersServices[i]);
-        }
-    }
-
     return checkers.map((checker) => ({
         id: checker.checker_id,
         name: checker.name,
         description: checker.description,
         location: checker.location,
-        checkSecond: checker.check_second,
-        services: checker.services
-    }));
-};
-
-export const getCheckersServices = async (
-    database: Pool,
-    checkerId: number[] | null = null,
-    includes: string[] = []
-): Promise<CheckerService[]> => {
-    const args = [];
-    let sql = "SELECT * FROM checkers_services";
-    if (checkerId) {
-        sql += (sql.includes("WHERE") ? " ||" : " WHERE") + " checker_id IN (?)";
-        args.push(checkerId);
-    }
-
-    let checkersServices: any[];
-    try {
-        [checkersServices] = await database.query<RowDataPacket[][]>(sql, args);
-    } catch (error) {
-        console.log(`SQL Error - ${__filename} - ${error}`);
-        throw new Error("Database error");
-    }
-
-    const checkers =
-        checkersServices.length > 0 && includes.includes("checker")
-            ? await getCheckers(
-                  database,
-                  checkersServices.map((checkerService) => checkerService.checker_id),
-                  subIncludes(includes, "checker")
-              )
-            : null;
-    const services =
-        checkersServices.length > 0 && includes.includes("service")
-            ? await getServices(
-                  database,
-                  checkersServices.map((checkerService) => checkerService.service_id),
-                  subIncludes(includes, "service")
-              )
-            : [];
-
-    return checkersServices.map((checkerService) => ({
-        checker: checkers?.find((checker) => checker.id === checkerService.checker_id) ?? checkerService.checker_id,
-        service: services[0]?.find((service) => service.id === checkerService.service_id) ?? checkerService.service_id
+        checkSecond: checker.check_second
     }));
 };
 
@@ -568,11 +506,6 @@ export type Checker = {
     description: string;
     location: string;
     checkSecond: number;
-};
-
-export type CheckerService = {
-    checker: Checker | number;
-    service: PrivateService | number;
 };
 
 export type Group = {
