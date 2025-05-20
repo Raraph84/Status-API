@@ -73,8 +73,8 @@ api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ reque
 });
 tasks.addTask((resolve, reject) => {
     console.log("Lancement du serveur HTTP...");
-    api.listen(process.env.PORT || 8080).then(() => {
-        console.log("Serveur HTTP lancé sur le port " + (process.env.PORT || 8080) + " !");
+    api.listen(process.env.PORT || 3000).then(() => {
+        console.log("Serveur HTTP lancé sur le port " + (process.env.PORT || 3000) + " !");
         resolve();
     }).catch((error) => {
         console.log("Impossible de lancer le serveur HTTP - " + error);
