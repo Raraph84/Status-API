@@ -1,36 +1,36 @@
 import { Request } from "raraph84-lib";
 import { Pool } from "mysql2/promise";
-import { getCheckers, getCheckersServices } from "../../../resources";
+import { getGroups, getGroupsServices } from "../../../resources";
 
 export const run = async (request: Request, database: Pool) => {
     const includes = request.searchParams.get("includes")?.toLowerCase().split(",") || [];
 
-    let checker;
+    let group;
     try {
-        checker = (await getCheckers(database, [parseInt(request.urlParams.checkerId) || 0]))[0];
+        group = (await getGroups(database, [parseInt(request.urlParams.groupId) || 0]))[0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
     }
 
-    if (!checker) {
-        request.end(400, "This checker does not exist");
+    if (!group) {
+        request.end(404, "This group does not exist");
         return;
     }
 
-    let checkerServices;
+    let services;
     try {
-        checkerServices = await getCheckersServices(database, [checker.id], includes);
+        services = await getGroupsServices(database, [group.id], includes);
     } catch (error) {
         request.end(500, "Internal server error");
         return;
     }
 
-    request.end(200, { services: checkerServices });
+    request.end(200, { services });
 };
 
 export const infos = {
-    path: "/checkers/:checkerId/services",
+    path: "/groups/:groupId/services",
     method: "GET",
     requiresAuth: true
 };

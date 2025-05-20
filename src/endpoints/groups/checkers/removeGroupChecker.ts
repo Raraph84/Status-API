@@ -1,8 +1,21 @@
 import { Request } from "raraph84-lib";
 import { Pool } from "mysql2/promise";
-import { getCheckers, getServices } from "../../../resources";
+import { getGroups, getCheckers } from "../../../resources";
 
 export const run = async (request: Request, database: Pool) => {
+    let group;
+    try {
+        group = (await getGroups(database, [parseInt(request.urlParams.groupId) || 0]))[0];
+    } catch (error) {
+        request.end(500, "Internal server error");
+        return;
+    }
+
+    if (!group) {
+        request.end(404, "This group does not exist");
+        return;
+    }
+
     let checker;
     try {
         checker = (await getCheckers(database, [parseInt(request.urlParams.checkerId) || 0]))[0];
@@ -16,24 +29,8 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    let service;
     try {
-        service = (await getServices(database, [parseInt(request.urlParams.serviceId) || 0]))[0][0];
-    } catch (error) {
-        request.end(500, "Internal server error");
-        return;
-    }
-
-    if (!service) {
-        request.end(400, "This service does not exist");
-        return;
-    }
-
-    try {
-        await database.query("DELETE FROM checkers_services WHERE checker_id=? && service_id=?", [
-            checker.id,
-            service.id
-        ]);
+        await database.query("DELETE FROM groups_checkers WHERE group_id=? AND checker_id=?", [group.id, checker.id]);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         request.end(500, "Internal server error");
@@ -44,7 +41,7 @@ export const run = async (request: Request, database: Pool) => {
 };
 
 export const infos = {
-    path: "/checkers/:checkerId/services/:serviceId",
+    path: "/groups/:groupId/checkers/:checkerId",
     method: "DELETE",
     requiresAuth: true
 };
