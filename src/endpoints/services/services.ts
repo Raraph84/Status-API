@@ -1,11 +1,8 @@
-const { getServices } = require("../../resources");
+import { Request } from "raraph84-lib";
+import { Pool } from "mysql2/promise";
+import { getServices } from "../../resources";
 
-/**
- * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql2/promise").Pool} database 
- */
-module.exports.run = async (request, database) => {
-
+export const run = async (request: Request, database: Pool) => {
     const includes = request.searchParams.get("includes")?.toLowerCase().split(",") || [];
 
     let services;
@@ -17,10 +14,10 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(200, { services: services[0] });
-}
+};
 
-module.exports.infos = {
+export const infos = {
     path: "/services",
     method: "GET",
     requiresAuth: true
-}
+};

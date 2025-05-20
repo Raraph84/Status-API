@@ -1,16 +1,12 @@
-const { getConfig } = require("raraph84-lib");
-const { getServices } = require("../../resources");
+import { getConfig, Request } from "raraph84-lib";
+import { Pool, RowDataPacket } from "mysql2/promise";
+import { getServices } from "../../resources";
 const config = getConfig(__dirname + "/../../..");
 
-/**
- * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql2/promise").Pool} database 
- */
-module.exports.run = async (request, database) => {
-
+export const run = async (request: Request, database: Pool) => {
     let service;
     try {
-        service = (await getServices(database, [request.urlParams.serviceId]))[0][0];
+        service = (await getServices(database, [parseInt(request.urlParams.serviceId) || 0]))[0][0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -25,7 +21,10 @@ module.exports.run = async (request, database) => {
 
     let statuses;
     try {
-        [statuses] = await database.query("SELECT * FROM services_daily_statuses WHERE service_id=? && checker_id=? && day>=?", [service.id, config.dataCheckerId, day - 30 * 3 + 1]);
+        [statuses] = await database.query<RowDataPacket[]>(
+            "SELECT * FROM services_daily_statuses WHERE service_id=? && checker_id=? && day>=?",
+            [service.id, config.dataCheckerId, day - 30 * 3 + 1]
+        );
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -33,11 +32,17 @@ module.exports.run = async (request, database) => {
     }
 
     const getTodayResponseTime = async () => {
-
-        const [statuses] = await database.query("SELECT * FROM services_statuses WHERE service_id=? && checker_id=? && minute>=? && minute<?", [service.id, config.dataCheckerId, day * 24 * 60, (day + 1) * 24 * 60]);
+        const [statuses] = await database.query<RowDataPacket[]>(
+            "SELECT * FROM services_statuses WHERE service_id=? && checker_id=? && minute>=? && minute<?",
+            [service.id, config.dataCheckerId, day * 24 * 60, (day + 1) * 24 * 60]
+        );
 
         const onlineStatuses = statuses.filter((status) => status.online);
-        return onlineStatuses.length > 0 ? Math.round(onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) / onlineStatuses.length * 10) / 10 : null;
+        return onlineStatuses.length > 0
+            ? Math.round(
+                  (onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) / onlineStatuses.length) * 10
+              ) / 10
+            : null;
     };
 
     let todayResponseTime;
@@ -49,7 +54,7 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    statuses.push({ day, response_time: todayResponseTime });
+    statuses.push({ day, response_time: todayResponseTime } as RowDataPacket);
 
     const responseTimes = [];
     for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
@@ -60,10 +65,10 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(200, { responseTimes });
-}
+};
 
-module.exports.infos = {
+export const infos = {
     path: "/services/:serviceId/responseTimes",
     method: "GET",
     requiresAuth: false
-}
+};

@@ -14,9 +14,9 @@ export const getServices = async (
         args.push(serviceId);
     }
 
-    let services: any[];
+    let services;
     try {
-        [services] = await database.query<RowDataPacket[][]>(sql, args);
+        [services] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -25,9 +25,9 @@ export const getServices = async (
     if (services.length > 0 && includes.includes("online")) {
         await Promise.all(
             services.map(async (service) => {
-                let lastEvent: any;
+                let lastEvent;
                 try {
-                    [lastEvent] = await database.query<RowDataPacket[][]>(
+                    [lastEvent] = await database.query<RowDataPacket[]>(
                         "SELECT * FROM services_events WHERE service_id=? && checker_id=? ORDER BY minute DESC LIMIT 1",
                         [service.service_id, config.dataCheckerId]
                     );
@@ -84,9 +84,9 @@ export const getPages = async (
         args.push(domain);
     }
 
-    let pages: any[];
+    let pages;
     try {
-        [pages] = await database.query<RowDataPacket[][]>(sql, args);
+        [pages] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -166,9 +166,9 @@ export const getPagesSubPages = async (
         args.push(pageId);
     }
 
-    let pagesSubPages: any[];
+    let pagesSubPages;
     try {
-        [pagesSubPages] = await database.query<RowDataPacket[][]>(sql, args);
+        [pagesSubPages] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -223,9 +223,9 @@ export const getPagesServices = async (
         args.push(pageId);
     }
 
-    let pagesServices: any[];
+    let pagesServices;
     try {
-        [pagesServices] = await database.query<RowDataPacket[][]>(sql, args);
+        [pagesServices] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -280,9 +280,9 @@ export const getCheckers = async (
         args.push(checkerId);
     }
 
-    let checkers: any[];
+    let checkers;
     try {
-        [checkers] = await database.query<RowDataPacket[][]>(sql, args);
+        [checkers] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -309,9 +309,9 @@ export const getGroups = async (
         args.push(groupId);
     }
 
-    let groups: any[];
+    let groups;
     try {
-        [groups] = await database.query<RowDataPacket[][]>(sql, args);
+        [groups] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -365,9 +365,9 @@ export const getGroupsServices = async (
         args.push(groupId);
     }
 
-    let groupsServices: any[];
+    let groupsServices;
     try {
-        [groupsServices] = await database.query<RowDataPacket[][]>(sql, args);
+        [groupsServices] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
@@ -408,9 +408,9 @@ export const getGroupsCheckers = async (
         args.push(groupId);
     }
 
-    let groupsCheckers: any[];
+    let groupsCheckers;
     try {
-        [groupsCheckers] = await database.query<RowDataPacket[][]>(sql, args);
+        [groupsCheckers] = await database.query<RowDataPacket[]>(sql, args);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
