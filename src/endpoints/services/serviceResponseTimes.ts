@@ -86,7 +86,7 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT * FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
+            "SELECT start_time, sent, lost, med_response_time FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
             [config.dataCheckerId, service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10)]
         );
     } catch (error) {
@@ -106,16 +106,16 @@ export const run = async (request: Request, database: Pool) => {
         const endTime = (currentDay + 1) * 24 * 60 * 6;
 
         let sum = 0;
-        let count = 0;
+        let sent = 0;
         for (const ping of smokeping) {
             if (ping.start_time < startTime || !ping.med_response_time) continue;
             if (ping.start_time >= endTime) break;
-            const c = ping.sent - (ping.lost ?? 0);
-            sum += ping.med_response_time * c;
-            count += c;
+            const count = ping.sent - (ping.lost ?? 0);
+            sum += ping.med_response_time * count;
+            sent += count;
         }
 
-        const responseTime = count > 0 ? Math.round(sum / count) / 100 : null;
+        const responseTime = sent > 0 ? Math.round(sum / sent) / 100 : null;
         responseTimes.push({ day: currentDay, responseTime });
     }
 

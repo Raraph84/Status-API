@@ -83,7 +83,7 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT * FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
+            "SELECT start_time, sent, downs FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
             [config.dataCheckerId, service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10)]
         );
     } catch (error) {
@@ -102,16 +102,16 @@ export const run = async (request: Request, database: Pool) => {
         const startTime = currentDay * 24 * 60 * 6;
         const endTime = (currentDay + 1) * 24 * 60 * 6;
 
-        let durations = 0;
+        let checks = 0;
         let downs = 0;
         for (const ping of smokeping) {
             if (ping.start_time < startTime) continue;
             if (ping.start_time >= endTime) break;
-            durations += ping.duration;
+            checks += ping.sent / (service.type === "server" ? 5 : 1);
             downs += ping.downs ?? 0;
         }
 
-        const uptime = durations > 0 ? Math.round(((durations - downs) / durations) * 100 * 1000) / 1000 : null;
+        const uptime = checks > 0 ? Math.round(((checks - downs) / checks) * 100 * 1000) / 1000 : null;
         uptimes.push({ day: currentDay, uptime });
     }
 
