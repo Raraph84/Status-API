@@ -86,7 +86,7 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT checker_id, start_time, sent, lost, med_response_time FROM services_smokeping WHERE service_id=? AND start_time>=? ORDER BY start_time, FIELD(checker_id, ?)",
+            "SELECT checker_id, start_time, sent, lost, med_response_time FROM services_smokeping WHERE service_id=? AND start_time>=?",
             [service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10), config.checkerPriorityId]
         );
     } catch (error) {
@@ -95,9 +95,16 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const checker = smokeping[0].checker_id;
+    const checkers: { checker: number; pings: any[]; next: number }[] = [];
+    for (const checker of config.checkerPriorityId) checkers.push({ checker, pings: [], next: 0 });
 
-    let nextPing = 0;
+    for (const ping of smokeping) {
+        const checker = checkers.find((checker) => checker.checker === ping.checker_id);
+        if (checker) checker.pings.push(ping);
+    }
+
+    const checker = checkers.find((checker) => checker.pings.length)!;
+
     const responseTimes = [];
     for (let currentDay = startDay; currentDay <= day; currentDay++) {
         if (currentDay < smokepingStartDay) {
@@ -111,9 +118,9 @@ export const run = async (request: Request, database: Pool) => {
         let sum = 0;
         let sent = 0;
 
-        while (nextPing < smokeping.length && smokeping[nextPing].start_time < endTime) {
-            const ping = smokeping[nextPing++];
-            if (ping.start_time < startTime || !ping.med_response_time || ping.checker_id !== checker) continue;
+        while (checker.next < checker.pings.length && checker.pings[checker.next].start_time < endTime) {
+            const ping = checker.pings[checker.next++];
+            if (ping.start_time < startTime || !ping.med_response_time) continue;
 
             const count = ping.sent - (ping.lost ?? 0);
             sum += ping.med_response_time * count;
