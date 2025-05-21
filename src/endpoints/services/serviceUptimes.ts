@@ -83,7 +83,7 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT start_time, duration, sent, downs FROM services_smokeping WHERE service_id=? AND start_time>=? ORDER BY start_time, FIELD(checker_id, ?)",
+            "SELECT checker_id, start_time, duration, sent, downs FROM services_smokeping WHERE service_id=? AND start_time>=?",
             [service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10), config.checkerPriorityId]
         );
     } catch (error) {
@@ -92,7 +92,14 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    let nextPing = 0;
+    const checkers: { checker: number; pings: any[]; next: number }[] = [];
+    for (const checker of config.checkerPriorityId) checkers.push({ checker, pings: [], next: 0 });
+
+    for (const ping of smokeping) {
+        const checker = checkers.find((checker) => checker.checker === ping.checker_id);
+        if (checker) checker.pings.push(ping);
+    }
+
     const uptimes = [];
     for (let currentDay = startDay; currentDay <= day; currentDay++) {
         if (currentDay < smokepingStartDay) {
@@ -107,17 +114,19 @@ export const run = async (request: Request, database: Pool) => {
         let downs = 0;
         const times = new Set();
 
-        while (nextPing < smokeping.length && smokeping[nextPing].start_time < endTime) {
-            const ping = smokeping[nextPing++];
-            if (ping.start_time < startTime) continue;
+        for (const checker of checkers) {
+            while (checker.next < checker.pings.length && checker.pings[checker.next].start_time < endTime) {
+                const ping = checker.pings[checker.next++];
+                if (ping.start_time < startTime) continue;
 
-            const psent = ping.sent / (service.type === "server" ? 5 : 1);
-            const pdowns = ping.downs ?? 0;
-            for (let i = 0; i < ping.duration; i++) {
-                if (times.has(ping.start_time + i)) continue;
-                checks++;
-                if (i / ping.duration < pdowns / psent) downs++;
-                times.add(ping.start_time + i);
+                const psent = ping.sent / (service.type === "server" ? 5 : 1);
+                const pdowns = ping.downs ?? 0;
+                for (let i = 0; i < ping.duration; i++) {
+                    if (times.has(ping.start_time + i)) continue;
+                    checks++;
+                    if (i / ping.duration < pdowns / psent) downs++;
+                    times.add(ping.start_time + i);
+                }
             }
         }
 
