@@ -83,7 +83,7 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT start_time, sent, downs FROM services_smokeping WHERE service_id=? AND start_time>=? ORDER BY start_time, FIELD(checker_id, ?)",
+            "SELECT start_time, duration, sent, downs FROM services_smokeping WHERE service_id=? AND start_time>=? ORDER BY start_time, FIELD(checker_id, ?)",
             [service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10), config.checkerPriorityId]
         );
     } catch (error) {
@@ -92,6 +92,7 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
+    let nextPing = 0;
     const uptimes = [];
     for (let currentDay = startDay; currentDay <= day; currentDay++) {
         if (currentDay < smokepingStartDay) {
@@ -106,12 +107,18 @@ export const run = async (request: Request, database: Pool) => {
         let downs = 0;
         const times = new Set();
 
-        for (const ping of smokeping) {
-            if (ping.start_time < startTime || times.has(ping.start_time)) continue;
-            if (ping.start_time >= endTime) break;
-            checks += ping.sent / (service.type === "server" ? 5 : 1);
-            downs += ping.downs ?? 0;
-            times.add(ping.start_time);
+        while (nextPing < smokeping.length && smokeping[nextPing].start_time < endTime) {
+            const ping = smokeping[nextPing++];
+            if (ping.start_time < startTime) continue;
+
+            const psent = ping.sent / (service.type === "server" ? 5 : 1);
+            const pdowns = ping.downs ?? 0;
+            for (let i = 0; i < ping.duration; i++) {
+                if (times.has(ping.start_time + i)) continue;
+                checks++;
+                if (i / ping.duration < pdowns / psent) downs++;
+                times.add(ping.start_time + i);
+            }
         }
 
         const uptime = checks > 0 ? Math.round(((checks - downs) / checks) * 100 * 1000) / 1000 : null;
