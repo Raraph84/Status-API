@@ -83,8 +83,8 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT start_time, sent, downs FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
-            [config.dataCheckerId, service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10)]
+            "SELECT start_time, sent, downs FROM services_smokeping WHERE service_id=? AND start_time>=? ORDER BY start_time, FIELD(checker_id, ?)",
+            [service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10), config.checkerPriorityId]
         );
     } catch (error) {
         request.end(500, "Internal server error");
@@ -104,11 +104,14 @@ export const run = async (request: Request, database: Pool) => {
 
         let checks = 0;
         let downs = 0;
+        const times = new Set();
+
         for (const ping of smokeping) {
-            if (ping.start_time < startTime) continue;
+            if (ping.start_time < startTime || times.has(ping.start_time)) continue;
             if (ping.start_time >= endTime) break;
             checks += ping.sent / (service.type === "server" ? 5 : 1);
             downs += ping.downs ?? 0;
+            times.add(ping.start_time);
         }
 
         const uptime = checks > 0 ? Math.round(((checks - downs) / checks) * 100 * 1000) / 1000 : null;
