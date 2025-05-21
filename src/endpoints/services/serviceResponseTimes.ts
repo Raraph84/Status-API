@@ -86,8 +86,8 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT start_time, sent, lost, med_response_time FROM services_smokeping WHERE checker_id=? AND service_id=? AND start_time>=?",
-            [config.dataCheckerId, service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10)]
+            "SELECT checker_id, start_time, sent, lost, med_response_time FROM services_smokeping WHERE service_id=? AND start_time>=? ORDER BY start_time, FIELD(checker_id, ?)",
+            [service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10), config.checkerPriorityId]
         );
     } catch (error) {
         request.end(500, "Internal server error");
@@ -95,6 +95,9 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
+    const checker = smokeping[0].checker_id;
+
+    let nextPing = 0;
     const responseTimes = [];
     for (let currentDay = startDay; currentDay <= day; currentDay++) {
         if (currentDay < smokepingStartDay) {
@@ -107,9 +110,11 @@ export const run = async (request: Request, database: Pool) => {
 
         let sum = 0;
         let sent = 0;
-        for (const ping of smokeping) {
-            if (ping.start_time < startTime || !ping.med_response_time) continue;
-            if (ping.start_time >= endTime) break;
+
+        while (nextPing < smokeping.length && smokeping[nextPing].start_time < endTime) {
+            const ping = smokeping[nextPing++];
+            if (ping.start_time < startTime || !ping.med_response_time || ping.checker_id !== checker) continue;
+
             const count = ping.sent - (ping.lost ?? 0);
             sum += ping.med_response_time * count;
             sent += count;
