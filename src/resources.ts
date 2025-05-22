@@ -23,13 +23,18 @@ export const getServices = async (
     }
 
     if (services.length > 0 && includes.includes("online")) {
+        const oldStates = await getOldServicesStates(
+            database,
+            services.map((service) => service.service_id)
+        );
         const states = await getServicesStates(
             database,
             services.map((service) => service.service_id)
         );
         for (const service of services) {
             const state = states.find((state) => state.service === service.service_id);
-            service.online = !!state?.online;
+            const oldState = oldStates.find((state) => state.service === service.service_id);
+            service.online = state ? state.online : !!oldState?.online;
         }
     }
 
@@ -57,7 +62,7 @@ export const getServices = async (
     ];
 };
 
-export const getServicesStates = async (
+export const getOldServicesStates = async (
     database: Pool,
     serviceId: number[]
 ): Promise<{ service: number; online: boolean }[]> => {
@@ -90,6 +95,41 @@ export const getServicesStates = async (
             service: lastEvent.service_id,
             online: !!lastEvent.online
         });
+    }
+
+    return results;
+};
+
+export const getServicesStates = async (
+    database: Pool,
+    serviceId: number[]
+): Promise<{ service: number; online: boolean }[]> => {
+    const startTime = Math.floor(Date.now() / 1000 / 10) - 24 * 60 * 10;
+
+    let subsql = "SELECT service_id, checker_id, MAX(start_time) AS start_time";
+    subsql += " FROM services_smokeping";
+    subsql += " WHERE service_id IN (?) AND start_time>?";
+    subsql += " GROUP BY service_id, checker_id";
+
+    let sql = "SELECT services_smokeping.service_id, services_smokeping.downs";
+    sql += " FROM services_smokeping";
+    sql += " JOIN (" + subsql + ") latest";
+    sql += " ON services_smokeping.checker_id=latest.checker_id AND services_smokeping.service_id=latest.service_id";
+    sql += " AND services_smokeping.start_time=latest.start_time";
+    sql += " ORDER BY FIELD(latest.checker_id, ?)";
+
+    let lastPings;
+    try {
+        [lastPings] = await database.query<RowDataPacket[]>(sql, [serviceId, startTime, config.checkerPriorityId]);
+    } catch (error) {
+        console.log(`SQL Error - ${__filename} - ${error}`);
+        throw new Error("Database error");
+    }
+
+    const results: { service: number; online: boolean }[] = [];
+    for (const lastPing of lastPings) {
+        if (results.some((online) => online.service === lastPing.service_id)) continue;
+        results.push({ service: lastPing.service_id, online: !lastPing.downs });
     }
 
     return results;
