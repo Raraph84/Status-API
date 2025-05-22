@@ -108,7 +108,7 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const checker = orderDataByChecker(smokeping).find((checker) => checker.data.length);
+    const checkers = orderDataByChecker(smokeping);
 
     const responseTimes = [];
     for (let day = startDay; day < endDay; day++) {
@@ -122,14 +122,16 @@ export const run = async (request: Request, database: Pool) => {
 
         let sum = 0;
         let sent = 0;
+        for (const checker of checkers) {
+            while (checker.next < checker.data.length && checker.data[checker.next].start_time < endTime) {
+                const ping = checker.data[checker.next++];
+                if (ping.start_time < startTime || !ping.med_response_time) continue;
 
-        while (checker && checker.next < checker.data.length && checker.data[checker.next].start_time < endTime) {
-            const ping = checker.data[checker.next++];
-            if (ping.start_time < startTime || !ping.med_response_time) continue;
-
-            const count = ping.sent - (ping.lost ?? 0);
-            sum += ping.med_response_time * count;
-            sent += count;
+                const count = ping.sent - (ping.lost ?? 0);
+                sum += ping.med_response_time * count;
+                sent += count;
+            }
+            if (sent > 0) break; // Use only the first checker with data
         }
 
         const responseTime = sent > 0 ? Math.round(sum / sent) / 100 : null;
