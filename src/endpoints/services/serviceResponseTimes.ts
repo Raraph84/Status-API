@@ -3,8 +3,7 @@ import { Pool, RowDataPacket } from "mysql2/promise";
 import { getServices } from "../../resources";
 const config = getConfig(__dirname + "/../../..");
 
-const smokepingStartTime = new Date(2025, 3 - 1, 24, 2).getTime();
-const smokepingStartDay = Math.floor(smokepingStartTime / 1000 / 60 / 60 / 24);
+const smokepingStartDay = Math.floor(new Date(2025, 3 - 1, 24, 2).getTime() / 1000 / 60 / 60 / 24);
 
 export const run = async (request: Request, database: Pool) => {
     let service;
@@ -21,7 +20,8 @@ export const run = async (request: Request, database: Pool) => {
     }
 
     const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
-    const startDay = day - 30 * 3 + 1;
+    const endDay = Math.floor(Date.now() / 1000 / 60 / 60 / 24) + 1;
+    const startDay = endDay - 30 * 3;
 
     const getOldResponseTimes = async () => {
         let statuses;
@@ -36,6 +36,8 @@ export const run = async (request: Request, database: Pool) => {
         }
 
         const getTodayResponseTime = async () => {
+            const day = endDay - 1;
+
             let statuses;
             try {
                 [statuses] = await database.query<RowDataPacket[]>(
@@ -48,23 +50,23 @@ export const run = async (request: Request, database: Pool) => {
             }
 
             const onlineStatuses = statuses.filter((status) => status.online);
-            return onlineStatuses.length > 0
-                ? Math.round(
-                      (onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) / onlineStatuses.length) *
-                          10
-                  ) / 10
-                : null;
+            const responseTime =
+                onlineStatuses.length > 0
+                    ? Math.round(
+                          (onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) /
+                              onlineStatuses.length) *
+                              10
+                      ) / 10
+                    : null;
+            return { day, response_time: responseTime };
         };
 
-        const todayResponseTime = await getTodayResponseTime();
-        statuses.push({ day, response_time: todayResponseTime } as RowDataPacket);
+        statuses.push((await getTodayResponseTime()) as RowDataPacket);
 
         const responseTimes = [];
-        for (let currentDay = startDay; currentDay <= day; currentDay++) {
-            responseTimes.push({
-                day: currentDay,
-                responseTime: statuses.find((status) => status.day === currentDay)?.response_time ?? null
-            });
+        for (let day = startDay; day < endDay; day++) {
+            const responseTime = statuses.find((status) => status.day === day)?.response_time ?? null;
+            responseTimes.push({ day, responseTime });
         }
 
         return responseTimes;
@@ -87,7 +89,7 @@ export const run = async (request: Request, database: Pool) => {
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
             "SELECT checker_id, start_time, sent, lost, med_response_time FROM services_smokeping WHERE service_id=? AND start_time>=?",
-            [service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10), config.checkerPriorityId]
+            [service.id, startDay * 24 * 60 * 6, config.checkerPriorityId]
         );
     } catch (error) {
         request.end(500, "Internal server error");
@@ -106,14 +108,14 @@ export const run = async (request: Request, database: Pool) => {
     const checker = checkers.find((checker) => checker.pings.length)!;
 
     const responseTimes = [];
-    for (let currentDay = startDay; currentDay <= day; currentDay++) {
-        if (currentDay < smokepingStartDay) {
-            responseTimes.push(oldResponseTimes.find((reponseTime) => reponseTime.day === currentDay));
+    for (let day = startDay; day < endDay; day++) {
+        if (day < smokepingStartDay) {
+            responseTimes.push(oldResponseTimes.find((reponseTime) => reponseTime.day === day));
             continue;
         }
 
-        const startTime = currentDay * 24 * 60 * 6;
-        const endTime = (currentDay + 1) * 24 * 60 * 6;
+        const startTime = day * 24 * 60 * 6;
+        const endTime = (day + 1) * 24 * 60 * 6;
 
         let sum = 0;
         let sent = 0;
@@ -128,7 +130,7 @@ export const run = async (request: Request, database: Pool) => {
         }
 
         const responseTime = sent > 0 ? Math.round(sum / sent) / 100 : null;
-        responseTimes.push({ day: currentDay, responseTime });
+        responseTimes.push({ day, responseTime });
     }
 
     request.end(200, { responseTimes });

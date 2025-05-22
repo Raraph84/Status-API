@@ -3,8 +3,7 @@ import { Pool, RowDataPacket } from "mysql2/promise";
 import { getServices } from "../../resources";
 const config = getConfig(__dirname + "/../../..");
 
-const smokepingStartTime = new Date(2025, 5 - 1, 13, 2).getTime();
-const smokepingStartDay = Math.floor(smokepingStartTime / 1000 / 60 / 60 / 24);
+const smokepingStartDay = Math.floor(new Date(2025, 5 - 1, 13, 2).getTime() / 1000 / 60 / 60 / 24);
 
 export const run = async (request: Request, database: Pool) => {
     let service;
@@ -20,15 +19,15 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
-    const startDay = day - 30 * 3 + 1;
+    const endDay = Math.floor(Date.now() / 1000 / 60 / 60 / 24) + 1;
+    const startDay = endDay - 30 * 3;
 
     const getOldUptimes = async () => {
         let statuses;
         try {
             [statuses] = await database.query<RowDataPacket[]>(
                 "SELECT * FROM services_daily_statuses WHERE service_id=? AND checker_id=? AND day>=?",
-                [service.id, config.dataCheckerId, day - 30 * 3 + 1]
+                [service.id, config.dataCheckerId, startDay]
             );
         } catch (error) {
             console.log(`SQL Error - ${__filename} - ${error}`);
@@ -36,6 +35,8 @@ export const run = async (request: Request, database: Pool) => {
         }
 
         const getTodayUptime = async () => {
+            const day = endDay - 1;
+
             let statuses;
             try {
                 [statuses] = await database.query<RowDataPacket[]>(
@@ -48,20 +49,17 @@ export const run = async (request: Request, database: Pool) => {
             }
 
             const onlineStatuses = statuses.filter((status) => status.online);
-            return statuses.length > 0
-                ? Math.round((onlineStatuses.length / statuses.length) * 100 * 1000) / 1000
-                : null;
+            const uptime =
+                statuses.length > 0 ? Math.round((onlineStatuses.length / statuses.length) * 100 * 1000) / 1000 : null;
+            return { day, uptime };
         };
 
-        const todayUptime = await getTodayUptime();
-        statuses.push({ day, uptime: todayUptime } as RowDataPacket);
+        statuses.push((await getTodayUptime()) as RowDataPacket);
 
         const uptimes = [];
-        for (let currentDay = day - 30 * 3 + 1; currentDay <= day; currentDay++) {
-            uptimes.push({
-                day: currentDay,
-                uptime: statuses.find((status) => status.day === currentDay)?.uptime ?? null
-            });
+        for (let day = startDay; day < endDay; day++) {
+            const uptime = statuses.find((status) => status.day === day)?.uptime ?? null;
+            uptimes.push({ day, uptime });
         }
 
         return uptimes;
@@ -84,7 +82,7 @@ export const run = async (request: Request, database: Pool) => {
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
             "SELECT checker_id, start_time, duration, sent, downs FROM services_smokeping WHERE service_id=? AND start_time>=?",
-            [service.id, Math.max(startDay * 24 * 60 * 6, smokepingStartTime / 1000 / 10), config.checkerPriorityId]
+            [service.id, startDay * 24 * 60 * 6, config.checkerPriorityId]
         );
     } catch (error) {
         request.end(500, "Internal server error");
@@ -101,14 +99,14 @@ export const run = async (request: Request, database: Pool) => {
     }
 
     const uptimes = [];
-    for (let currentDay = startDay; currentDay <= day; currentDay++) {
-        if (currentDay < smokepingStartDay) {
-            uptimes.push(oldUptimes.find((uptime) => uptime.day === currentDay));
+    for (let day = startDay; day < endDay; day++) {
+        if (day < smokepingStartDay) {
+            uptimes.push(oldUptimes.find((uptime) => uptime.day === day));
             continue;
         }
 
-        const startTime = currentDay * 24 * 60 * 6;
-        const endTime = (currentDay + 1) * 24 * 60 * 6;
+        const startTime = day * 24 * 60 * 6;
+        const endTime = (day + 1) * 24 * 60 * 6;
 
         let checks = 0;
         let downs = 0;
@@ -131,7 +129,7 @@ export const run = async (request: Request, database: Pool) => {
         }
 
         const uptime = checks > 0 ? Math.round(((checks - downs) / checks) * 100 * 1000) / 1000 : null;
-        uptimes.push({ day: currentDay, uptime });
+        uptimes.push({ day, uptime });
     }
 
     request.end(200, { uptimes });
