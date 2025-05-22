@@ -1,6 +1,7 @@
 import { getConfig, Request } from "raraph84-lib";
 import { Pool, RowDataPacket } from "mysql2/promise";
 import { getServices } from "../../resources";
+import { orderDataByChecker } from "./serviceUptimes";
 const config = getConfig(__dirname + "/../../..");
 
 const smokepingStartDay = Math.floor(new Date(2025, 3 - 1, 24, 2).getTime() / 1000 / 60 / 60 / 24);
@@ -19,7 +20,6 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const day = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
     const endDay = Math.floor(Date.now() / 1000 / 60 / 60 / 24) + 1;
     const startDay = endDay - 30 * 3;
 
@@ -97,15 +97,7 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const checkers: { checker: number; pings: any[]; next: number }[] = [];
-    for (const checker of config.checkerPriorityId) checkers.push({ checker, pings: [], next: 0 });
-
-    for (const ping of smokeping) {
-        const checker = checkers.find((checker) => checker.checker === ping.checker_id);
-        if (checker) checker.pings.push(ping);
-    }
-
-    const checker = checkers.find((checker) => checker.pings.length)!;
+    const checker = orderDataByChecker(smokeping).find((checker) => checker.data.length)!;
 
     const responseTimes = [];
     for (let day = startDay; day < endDay; day++) {
@@ -120,8 +112,8 @@ export const run = async (request: Request, database: Pool) => {
         let sum = 0;
         let sent = 0;
 
-        while (checker.next < checker.pings.length && checker.pings[checker.next].start_time < endTime) {
-            const ping = checker.pings[checker.next++];
+        while (checker.next < checker.data.length && checker.data[checker.next].start_time < endTime) {
+            const ping = checker.data[checker.next++];
             if (ping.start_time < startTime || !ping.med_response_time) continue;
 
             const count = ping.sent - (ping.lost ?? 0);
