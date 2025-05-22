@@ -26,8 +26,8 @@ export const run = async (request: Request, database: Pool) => {
         let statuses;
         try {
             [statuses] = await database.query<RowDataPacket[]>(
-                "SELECT * FROM services_daily_statuses WHERE service_id=? AND checker_id=? AND day>=?",
-                [service.id, config.dataCheckerId, startDay]
+                "SELECT * FROM services_daily_statuses WHERE service_id=? AND day>=?",
+                [service.id, startDay]
             );
         } catch (error) {
             console.log(`SQL Error - ${__filename} - ${error}`);
@@ -40,27 +40,47 @@ export const run = async (request: Request, database: Pool) => {
             let statuses;
             try {
                 [statuses] = await database.query<RowDataPacket[]>(
-                    "SELECT * FROM services_statuses WHERE service_id=? AND checker_id=? AND minute>=?",
-                    [service.id, config.dataCheckerId, day * 24 * 60]
+                    "SELECT * FROM services_statuses WHERE service_id=? AND minute>=?",
+                    [service.id, day * 24 * 60]
                 );
             } catch (error) {
                 console.log(`SQL Error - ${__filename} - ${error}`);
                 throw error;
             }
 
-            const onlineStatuses = statuses.filter((status) => status.online);
-            const uptime =
-                statuses.length > 0 ? Math.round((onlineStatuses.length / statuses.length) * 100 * 1000) / 1000 : null;
+            const checkers = orderDataByChecker(statuses);
+
+            let checks = 0;
+            let ups = 0;
+            const minutes = new Set();
+            for (const checker of checkers) {
+                for (const status of checker.data) {
+                    if (minutes.has(status.minute)) continue;
+                    checks += 1;
+                    if (status.online) ups += 1;
+                    minutes.add(status.minute);
+                }
+            }
+
+            const uptime = checks > 0 ? Math.round((ups / checks) * 100 * 1000) / 1000 : null;
+
             return { day, uptime };
         };
 
-        statuses.push((await getTodayUptime()) as RowDataPacket);
+        const checkers = orderDataByChecker(statuses);
 
         const uptimes = [];
-        for (let day = startDay; day < endDay; day++) {
-            const uptime = statuses.find((status) => status.day === day)?.uptime ?? null;
-            uptimes.push({ day, uptime });
+        for (let day = startDay; day < endDay - 1; day++) {
+            for (const checker of checkers) {
+                const status = checker.data.find((status) => status.day === day);
+                if (!status || status.uptime === null) continue;
+                uptimes.push({ day, uptime: status.uptime });
+                break;
+            }
+            if (!uptimes.find((uptime) => uptime.day === day)) uptimes.push({ day, uptime: null });
         }
+
+        uptimes.push((await getTodayUptime()) as RowDataPacket);
 
         return uptimes;
     };
@@ -105,7 +125,6 @@ export const run = async (request: Request, database: Pool) => {
         let checks = 0;
         let ups = 0;
         const times = new Set();
-
         for (const checker of checkers) {
             while (checker.next < checker.data.length && checker.data[checker.next].start_time < endTime) {
                 const ping = checker.data[checker.next++];

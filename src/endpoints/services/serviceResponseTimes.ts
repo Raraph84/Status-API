@@ -27,8 +27,8 @@ export const run = async (request: Request, database: Pool) => {
         let statuses;
         try {
             [statuses] = await database.query<RowDataPacket[]>(
-                "SELECT * FROM services_daily_statuses WHERE service_id=? AND checker_id=? AND day>=?",
-                [service.id, config.dataCheckerId, startDay]
+                "SELECT * FROM services_daily_statuses WHERE service_id=? AND day>=?",
+                [service.id, startDay]
             );
         } catch (error) {
             console.log(`SQL Error - ${__filename} - ${error}`);
@@ -41,33 +41,44 @@ export const run = async (request: Request, database: Pool) => {
             let statuses;
             try {
                 [statuses] = await database.query<RowDataPacket[]>(
-                    "SELECT * FROM services_statuses WHERE service_id=? AND checker_id=? AND minute>=?",
-                    [service.id, config.dataCheckerId, day * 24 * 60]
+                    "SELECT * FROM services_statuses WHERE service_id=? AND minute>=?",
+                    [service.id, day * 24 * 60]
                 );
             } catch (error) {
                 console.log(`SQL Error - ${__filename} - ${error}`);
                 throw error;
             }
 
-            const onlineStatuses = statuses.filter((status) => status.online);
-            const responseTime =
-                onlineStatuses.length > 0
-                    ? Math.round(
-                          (onlineStatuses.reduce((acc, status) => acc + status.response_time, 0) /
-                              onlineStatuses.length) *
-                              10
-                      ) / 10
-                    : null;
-            return { day, response_time: responseTime };
+            const checker = orderDataByChecker(statuses).find((checker) => checker.data.length);
+
+            let checks = 0;
+            let sum = 0;
+            for (const status of checker?.data ?? []) {
+                if (status.response_time === null) continue;
+                checks += 1;
+                sum += status.response_time;
+            }
+
+            const responseTime = checks > 0 ? Math.round((sum / checks) * 10) / 10 : null;
+
+            return { day, responseTime };
         };
 
-        statuses.push((await getTodayResponseTime()) as RowDataPacket);
+        const checkers = orderDataByChecker(statuses);
 
         const responseTimes = [];
-        for (let day = startDay; day < endDay; day++) {
-            const responseTime = statuses.find((status) => status.day === day)?.response_time ?? null;
-            responseTimes.push({ day, responseTime });
+        for (let day = startDay; day < endDay - 1; day++) {
+            for (const checker of checkers) {
+                const status = checker.data.find((status) => status.day === day);
+                if (!status || status.response_time === null) continue;
+                responseTimes.push({ day, responseTime: status.response_time });
+                break;
+            }
+            if (!responseTimes.find((responseTime) => responseTime.day === day))
+                responseTimes.push({ day, responseTime: null });
         }
+
+        responseTimes.push((await getTodayResponseTime()) as RowDataPacket);
 
         return responseTimes;
     };
@@ -97,7 +108,7 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const checker = orderDataByChecker(smokeping).find((checker) => checker.data.length)!;
+    const checker = orderDataByChecker(smokeping).find((checker) => checker.data.length);
 
     const responseTimes = [];
     for (let day = startDay; day < endDay; day++) {
@@ -112,7 +123,7 @@ export const run = async (request: Request, database: Pool) => {
         let sum = 0;
         let sent = 0;
 
-        while (checker.next < checker.data.length && checker.data[checker.next].start_time < endTime) {
+        while (checker && checker.next < checker.data.length && checker.data[checker.next].start_time < endTime) {
             const ping = checker.data[checker.next++];
             if (ping.start_time < startTime || !ping.med_response_time) continue;
 

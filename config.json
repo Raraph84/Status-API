@@ -4,6 +4,5 @@
         "user": "status_api",
         "database": "status"
     },
-    "dataCheckerId": 2,
     "checkerPriorityId": [7, 2, 4, 3]
 }
