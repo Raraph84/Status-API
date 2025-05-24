@@ -1,6 +1,6 @@
 {
     "database": {
-        "host": "raraph84-clients-vps-ovh.polyc.be",
+        "host": "172.17.0.1",
         "user": "status_api",
         "database": "status"
     },
