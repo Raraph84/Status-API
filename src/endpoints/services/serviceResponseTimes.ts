@@ -99,7 +99,7 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT checker_id, start_time, sent, lost, med_response_time FROM services_smokeping WHERE service_id=? AND start_time>=?",
+            "SELECT checker_id, start_time, checks, lost, med_response_time FROM services_smokeping WHERE service_id=? AND start_time>=?",
             [service.id, startDay * 24 * 60 * 6, config.checkerPriorityId]
         );
     } catch (error) {
@@ -127,7 +127,7 @@ export const run = async (request: Request, database: Pool) => {
                 const ping = checker.data[checker.next++];
                 if (ping.start_time < startTime || !ping.med_response_time) continue;
 
-                const count = ping.sent - (ping.lost ?? 0);
+                const count = ping.checks * 5 - (ping.lost ?? 0);
                 sum += ping.med_response_time * count;
                 sent += count;
             }

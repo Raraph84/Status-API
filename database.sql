@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost
--- Généré le : sam. 31 mai 2025 à 17:53
+-- Généré le : jeu. 03 juil. 2025 à 08:56
 -- Version du serveur : 10.11.11-MariaDB-0+deb12u1
 -- Version de PHP : 8.2.28
 
@@ -162,12 +162,12 @@ CREATE TABLE `services_smokeping` (
   `checker_id` tinyint(3) UNSIGNED NOT NULL,
   `start_time` int(10) UNSIGNED NOT NULL,
   `duration` tinyint(3) UNSIGNED NOT NULL,
-  `sent` tinyint(3) UNSIGNED NOT NULL,
-  `lost` tinyint(3) UNSIGNED DEFAULT NULL,
+  `checks` tinyint(3) UNSIGNED NOT NULL,
+  `downs` tinyint(3) UNSIGNED DEFAULT NULL,
   `med_response_time` mediumint(8) UNSIGNED DEFAULT NULL,
   `min_response_time` mediumint(8) UNSIGNED DEFAULT NULL,
   `max_response_time` mediumint(8) UNSIGNED DEFAULT NULL,
-  `downs` tinyint(4) UNSIGNED DEFAULT NULL
+  `lost` smallint(5) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
