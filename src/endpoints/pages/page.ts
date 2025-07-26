@@ -7,7 +7,13 @@ export const run = async (request: Request, database: Pool) => {
 
     let page;
     try {
-        page = await getPages(database, request.metadata.authenticated ? [parseInt(request.urlParams.pageId) || 0] : null, [request.urlParams.pageId], [request.urlParams.pageId], includes);
+        page = await getPages(
+            database,
+            request.metadata.authenticated ? [parseInt(request.urlParams.pageId) || 0] : null,
+            [request.urlParams.pageId],
+            [request.urlParams.pageId],
+            includes
+        );
     } catch (error) {
         request.end(500, "Internal server error");
         return;
