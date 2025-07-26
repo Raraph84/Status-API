@@ -1,35 +1,45 @@
-const { readdirSync } = require("fs");
-const { join } = require("path");
-const { createPool } = require("mysql2/promise");
-const { getConfig, TaskManager, HttpServer, filterEndpointsByPath } = require("raraph84-lib");
+import { createPool } from "mysql2/promise";
+import { filterEndpointsByPath, getConfig, HttpServer, TaskManager } from "raraph84-lib";
+import fs from "fs";
+import path from "path";
+
 const config = getConfig(__dirname);
 
 require("dotenv").config({ path: [".env.local", ".env"] });
 
 const tasks = new TaskManager();
 
-const database = createPool({ password: process.env.DATABASE_PASSWORD, charset: "utf8mb4_general_ci", ...config.database });
-tasks.addTask(async (resolve, reject) => {
-    console.log("Connexion à la base de données...");
-    try {
-        await database.query("SELECT 1");
-    } catch (error) {
-        console.log("Impossible de se connecter à la base de données - " + error);
-        reject();
-        return;
-    }
-    console.log("Connecté à la base de données !");
-    resolve();
-}, (resolve) => database.end().then(() => resolve()));
+const database = createPool({
+    password: process.env.DATABASE_PASSWORD,
+    charset: "utf8mb4_general_ci",
+    ...config.database
+});
+tasks.addTask(
+    (resolve, reject) => {
+        console.log("Connecting to the database...");
+        database
+            .query("SELECT 1")
+            .then(() => {
+                console.log("Connected to the database.");
+                resolve();
+            })
+            .catch((error) => {
+                console.log("Unable to connect to the database - " + error);
+                reject();
+            });
+    },
+    (resolve) => database.end().then(() => resolve())
+);
 
-const endpointsFiles = readdirSync(join(__dirname, "src", "endpoints"), { recursive: true })
+const endpointsFiles = fs
+    .readdirSync(path.join(__dirname, "src", "endpoints"), { recursive: true })
+    .map((file) => file as string)
     .filter((file) => file.endsWith(".js") || file.endsWith(".ts"))
     .filter((file, i, files) => file.endsWith(".js") || !files.includes(file.replace(".ts", ".js")))
-    .map((endpoint) => require(join(__dirname, "src", "endpoints", endpoint)));
+    .map((endpoint) => require(path.join(__dirname, "src", "endpoints", endpoint)));
 
 const api = new HttpServer();
-api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ request) => {
-
+api.on("request", async (request) => {
     const endpoints = filterEndpointsByPath(endpointsFiles, request);
 
     request.setHeader("Access-Control-Allow-Origin", "*");
@@ -60,7 +70,6 @@ api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ reque
     }
 
     if (request.headers.authorization) {
-
         if (request.headers.authorization !== process.env.PANEL_KEY) {
             request.end(401, "Invalid token");
             return;
@@ -73,15 +82,20 @@ api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ reque
 
     endpoint.run(request, database);
 });
-tasks.addTask((resolve, reject) => {
-    console.log("Lancement du serveur HTTP...");
-    api.listen(process.env.PORT || 4000).then(() => {
-        console.log("Serveur HTTP lancé sur le port " + (process.env.PORT || 4000) + " !");
-        resolve();
-    }).catch((error) => {
-        console.log("Impossible de lancer le serveur HTTP - " + error);
-        reject();
-    });
-}, (resolve) => api.close().then(() => resolve()));
+tasks.addTask(
+    (resolve, reject) => {
+        console.log("Starting HTTP server...");
+        api.listen(parseInt(process.env.PORT!) || 4000)
+            .then(() => {
+                console.log("HTTP server started on port " + (parseInt(process.env.PORT!) || 4000) + ".");
+                resolve();
+            })
+            .catch((error) => {
+                console.log("Unable to start HTTP server - " + error);
+                reject();
+            });
+    },
+    (resolve) => api.close().then(() => resolve())
+);
 
 tasks.run();
