@@ -29,7 +29,7 @@ export const run = async (request: Request, database: Pool) => {
     }
 
     if (!service) {
-        request.end(400, "This service does not exist");
+        request.end(404, "This service does not exist");
         return;
     }
 
@@ -41,6 +41,8 @@ export const run = async (request: Request, database: Pool) => {
             request.end(400, "Type must be a string");
             return;
         }
+
+        request.jsonBody.type = request.jsonBody.type.trim();
 
         if (!["website", "api", "gateway", "minecraft", "server"].includes(request.jsonBody.type)) {
             request.end(400, "Invalid type");
@@ -57,6 +59,8 @@ export const run = async (request: Request, database: Pool) => {
             return;
         }
 
+        request.jsonBody.name = request.jsonBody.name.trim();
+
         if (request.jsonBody.name.length < 2 || request.jsonBody.name.length > 50) {
             request.end(400, "Name must be between 2 and 50 characters");
             return;
@@ -71,6 +75,8 @@ export const run = async (request: Request, database: Pool) => {
             request.end(400, "Host must be a string");
             return;
         }
+
+        request.jsonBody.host = request.jsonBody.host.trim();
 
         if (request.jsonBody.host.length < 2 || request.jsonBody.host.length > 100) {
             request.end(400, "Host must be between 2 and 100 characters");

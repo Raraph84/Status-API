@@ -14,7 +14,7 @@ export const run = async (request: Request, database: Pool) => {
     }
 
     if (!group) {
-        request.end(400, "This group does not exist");
+        request.end(404, "This group does not exist");
         return;
     }
 

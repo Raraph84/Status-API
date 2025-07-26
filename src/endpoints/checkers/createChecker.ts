@@ -12,6 +12,8 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
+    request.jsonBody.name = request.jsonBody.name.trim();
+
     if (request.jsonBody.name.length < 2 || request.jsonBody.name.length > 50) {
         request.end(400, "Name must be between 2 and 50 characters");
         return;
@@ -22,6 +24,8 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
+    request.jsonBody.description = request.jsonBody.description.trim();
+
     if (request.jsonBody.description.length < 2 || request.jsonBody.description.length > 100) {
         request.end(400, "Description must be between 2 and 100 characters");
         return;
@@ -31,6 +35,8 @@ export const run = async (request: Request, database: Pool) => {
         request.end(400, "Location must be a string");
         return;
     }
+
+    request.jsonBody.location = request.jsonBody.location.trim();
 
     if (request.jsonBody.location.length < 2 || request.jsonBody.location.length > 50) {
         request.end(400, "Location must be between 2 and 50 characters");

@@ -7,18 +7,15 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    if (typeof request.jsonBody.shortName === "undefined") {
-        request.end(400, "Missing short name");
-        return;
-    }
-
     if (typeof request.jsonBody.shortName !== "string") {
         request.end(400, "Short name must be a string");
         return;
     }
 
-    if (typeof request.jsonBody.title === "undefined") {
-        request.end(400, "Missing title");
+    request.jsonBody.shortName = request.jsonBody.shortName.trim();
+
+    if (request.jsonBody.shortName.length < 2 || request.jsonBody.shortName.length > 15) {
+        request.end(400, "Short name must be between 2 and 15 characters");
         return;
     }
 
@@ -27,8 +24,10 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    if (typeof request.jsonBody.url === "undefined") {
-        request.end(400, "Missing url");
+    request.jsonBody.title = request.jsonBody.title.trim();
+
+    if (request.jsonBody.title.length < 2 || request.jsonBody.title.length > 50) {
+        request.end(400, "Title must be between 2 and 50 characters");
         return;
     }
 
@@ -37,8 +36,10 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    if (typeof request.jsonBody.logoUrl === "undefined") {
-        request.end(400, "Missing logo url");
+    request.jsonBody.url = request.jsonBody.url.trim();
+
+    if (request.jsonBody.url.length < 2 || request.jsonBody.url.length > 500) {
+        request.end(400, "Url must be between 2 and 500 characters");
         return;
     }
 
@@ -47,14 +48,25 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    if (typeof request.jsonBody.domain === "undefined") {
-        request.end(400, "Missing domain");
+    request.jsonBody.logoUrl = request.jsonBody.logoUrl.trim();
+
+    if (request.jsonBody.logoUrl.length < 2 || request.jsonBody.logoUrl.length > 500) {
+        request.end(400, "Logo url must be between 2 and 500 characters");
         return;
     }
 
     if (typeof request.jsonBody.domain !== "string" && request.jsonBody.domain !== null) {
         request.end(400, "Domain must be a string or null");
         return;
+    }
+
+    if (request.jsonBody.domain !== null) {
+        request.jsonBody.domain = request.jsonBody.domain.trim();
+
+        if (request.jsonBody.domain.length < 2 || request.jsonBody.domain.length > 50) {
+            request.end(400, "Domain must be between 2 et 50 caractères ou null");
+            return;
+        }
     }
 
     let pageId;

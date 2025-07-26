@@ -15,7 +15,7 @@ export const run = async (request: Request, database: Pool) => {
     }
 
     if (!service) {
-        request.end(400, "This service does not exist");
+        request.end(404, "This service does not exist");
         return;
     }
 

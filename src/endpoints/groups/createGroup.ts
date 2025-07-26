@@ -12,6 +12,8 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
+    request.jsonBody.name = request.jsonBody.name.trim();
+
     if (request.jsonBody.name.length < 2 || request.jsonBody.name.length > 50) {
         request.end(400, "Name must be between 2 and 50 characters");
         return;

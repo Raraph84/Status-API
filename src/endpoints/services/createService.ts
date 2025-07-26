@@ -7,23 +7,15 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    if (typeof request.jsonBody.type === "undefined") {
-        request.end(400, "Missing type");
-        return;
-    }
-
     if (typeof request.jsonBody.type !== "string") {
         request.end(400, "Type must be a string");
         return;
     }
 
+    request.jsonBody.type = request.jsonBody.type.trim();
+
     if (!["website", "api", "gateway", "minecraft", "server"].includes(request.jsonBody.type)) {
         request.end(400, "Invalid type");
-        return;
-    }
-
-    if (typeof request.jsonBody.name === "undefined") {
-        request.end(400, "Missing name");
         return;
     }
 
@@ -32,13 +24,10 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
+    request.jsonBody.name = request.jsonBody.name.trim();
+
     if (request.jsonBody.name.length < 2 || request.jsonBody.name.length > 50) {
         request.end(400, "Name must be between 2 and 50 characters");
-        return;
-    }
-
-    if (typeof request.jsonBody.host === "undefined") {
-        request.end(400, "Missing host");
         return;
     }
 
@@ -47,13 +36,10 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
+    request.jsonBody.host = request.jsonBody.host.trim();
+
     if (request.jsonBody.host.length < 2 || request.jsonBody.host.length > 100) {
         request.end(400, "Host must be between 2 and 100 characters");
-        return;
-    }
-
-    if (typeof request.jsonBody.protocol === "undefined") {
-        request.end(400, "Missing protocol");
         return;
     }
 
@@ -67,18 +53,8 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    if (typeof request.jsonBody.alert === "undefined") {
-        request.end(400, "Missing alert");
-        return;
-    }
-
     if (typeof request.jsonBody.alert !== "boolean") {
         request.end(400, "Alert must be a boolean");
-        return;
-    }
-
-    if (typeof request.jsonBody.disabled === "undefined") {
-        request.end(400, "Missing disabled");
         return;
     }
 

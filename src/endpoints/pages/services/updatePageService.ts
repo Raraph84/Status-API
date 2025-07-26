@@ -56,12 +56,13 @@ export const run = async (request: Request, database: Pool) => {
             return;
         }
 
-        if (
-            typeof request.jsonBody.displayName === "string" &&
-            (request.jsonBody.displayName.length < 2 || request.jsonBody.displayName.length > 50)
-        ) {
-            request.end(400, "Display name must be between 2 and 50 characters");
-            return;
+        if (request.jsonBody.displayName !== null) {
+            request.jsonBody.displayName = request.jsonBody.displayName.trim();
+
+            if (request.jsonBody.displayName.length < 2 || request.jsonBody.displayName.length > 50) {
+                request.end(400, "Display name must be between 2 and 50 characters");
+                return;
+            }
         }
 
         sql += (!sql.includes("SET") ? "SET" : ",") + " display_name=?";
