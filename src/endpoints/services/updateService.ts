@@ -1,29 +1,28 @@
-const { getServices } = require("../../resources");
+import { Pool } from "mysql2/promise";
+import { Request } from "raraph84-lib";
+import { getServices } from "../../resources";
 
-/**
- * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql2/promise").Pool} database 
- */
-module.exports.run = async (request, database) => {
-
+export const run = async (request: Request, database: Pool) => {
     if (!request.jsonBody) {
         request.end(400, "Invalid JSON");
         return;
     }
 
-    if (typeof request.jsonBody.type === "undefined"
-        && typeof request.jsonBody.name === "undefined"
-        && typeof request.jsonBody.host === "undefined"
-        && typeof request.jsonBody.protocol === "undefined"
-        && typeof request.jsonBody.alert === "undefined"
-        && typeof request.jsonBody.disabled === "undefined") {
+    if (
+        typeof request.jsonBody.type === "undefined" &&
+        typeof request.jsonBody.name === "undefined" &&
+        typeof request.jsonBody.host === "undefined" &&
+        typeof request.jsonBody.protocol === "undefined" &&
+        typeof request.jsonBody.alert === "undefined" &&
+        typeof request.jsonBody.disabled === "undefined"
+    ) {
         request.end(400, "Missing type, name, host, protocol, alert or disabled");
         return;
     }
 
     let service;
     try {
-        service = (await getServices(database, [request.urlParams.serviceId]))[0][0];
+        service = (await getServices(database, [parseInt(request.urlParams.serviceId) || 0]))[0][0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -38,7 +37,6 @@ module.exports.run = async (request, database) => {
     const args = [];
 
     if (typeof request.jsonBody.type !== "undefined") {
-
         if (typeof request.jsonBody.type !== "string") {
             request.end(400, "Type must be a string");
             return;
@@ -54,7 +52,6 @@ module.exports.run = async (request, database) => {
     }
 
     if (typeof request.jsonBody.name !== "undefined") {
-
         if (typeof request.jsonBody.name !== "string") {
             request.end(400, "Name must be a string");
             return;
@@ -70,7 +67,6 @@ module.exports.run = async (request, database) => {
     }
 
     if (typeof request.jsonBody.host !== "undefined") {
-
         if (typeof request.jsonBody.host !== "string") {
             request.end(400, "Host must be a string");
             return;
@@ -86,7 +82,6 @@ module.exports.run = async (request, database) => {
     }
 
     if (typeof request.jsonBody.protocol !== "undefined") {
-
         if (typeof request.jsonBody.protocol !== "number") {
             request.end(400, "Protocol must be a number");
             return;
@@ -102,7 +97,6 @@ module.exports.run = async (request, database) => {
     }
 
     if (typeof request.jsonBody.disabled !== "undefined") {
-
         if (typeof request.jsonBody.disabled !== "boolean") {
             request.end(400, "Disabled must be a boolean");
             return;
@@ -113,7 +107,6 @@ module.exports.run = async (request, database) => {
     }
 
     if (typeof request.jsonBody.alert !== "undefined") {
-
         if (typeof request.jsonBody.alert !== "boolean") {
             request.end(400, "Alert must be a boolean");
             return;
@@ -135,10 +128,10 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(204);
-}
+};
 
-module.exports.infos = {
+export const infos = {
     path: "/services/:serviceId",
     method: "PATCH",
     requiresAuth: true
-}
+};
