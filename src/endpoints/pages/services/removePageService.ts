@@ -1,14 +1,13 @@
-const { getPages, getServices } = require("../../../resources");
+import { Pool } from "mysql2/promise";
+import { Request } from "raraph84-lib";
+import { getPages, getServices, PrivatePage, PrivateService } from "../../../resources";
 
-/**
- * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql2/promise").Pool} database 
- */
-module.exports.run = async (request, database) => {
-
+export const run = async (request: Request, database: Pool) => {
     let page;
     try {
-        page = (await getPages(database, [request.urlParams.pageId], null, null, ["services"]))[0][0];
+        page = (
+            await getPages(database, [parseInt(request.urlParams.pageId) || 0], null, null, ["services"])
+        )[0][0] as PrivatePage & { services: PrivateService[] };
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -21,7 +20,7 @@ module.exports.run = async (request, database) => {
 
     let service;
     try {
-        service = (await getServices(database, [request.urlParams.serviceId]))[0][0];
+        service = (await getServices(database, [parseInt(request.urlParams.serviceId) || 0]))[0][0];
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -40,7 +39,10 @@ module.exports.run = async (request, database) => {
 
     try {
         await database.query("DELETE FROM pages_services WHERE page_id=? && service_id=?", [page.id, service.id]);
-        await database.query("UPDATE pages_services SET position=position-1 WHERE page_id=? && position>?", [page.id, pageService.position]);
+        await database.query("UPDATE pages_services SET position=position-1 WHERE page_id=? && position>?", [
+            page.id,
+            pageService.position
+        ]);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         request.end(500, "Internal server error");
@@ -48,10 +50,10 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(204);
-}
+};
 
-module.exports.infos = {
+export const infos = {
     path: "/pages/:pageId/services/:serviceId",
     method: "DELETE",
     requiresAuth: true
-}
+};

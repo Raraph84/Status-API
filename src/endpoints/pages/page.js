@@ -10,7 +10,7 @@ module.exports.run = async (request, database) => {
 
     let page;
     try {
-        page = await getPages(database, request.authenticated ? [request.urlParams.pageId] : null, [request.urlParams.pageId], [request.urlParams.pageId], includes);
+        page = await getPages(database, request.metadata.authenticated ? [request.urlParams.pageId] : null, [request.urlParams.pageId], [request.urlParams.pageId], includes);
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -21,7 +21,7 @@ module.exports.run = async (request, database) => {
         return;
     }
 
-    request.end(200, page[request.authenticated ? 0 : 1][0]);
+    request.end(200, page[request.metadata.authenticated ? 0 : 1][0]);
 }
 
 module.exports.infos = {

@@ -18,7 +18,7 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    request.end(200, service[(request as any).authenticated ? 0 : 1][0]);
+    request.end(200, service[request.metadata.authenticated ? 0 : 1][0]);
 };
 
 export const infos = {

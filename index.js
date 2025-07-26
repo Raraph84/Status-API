@@ -66,7 +66,7 @@ api.on("request", async (/** @type {import("raraph84-lib/src/Request")} */ reque
             return;
         }
 
-        request.authenticated = true;
+        request.metadata.authenticated = true;
     }
 
     request.urlParams = endpoint.params;
