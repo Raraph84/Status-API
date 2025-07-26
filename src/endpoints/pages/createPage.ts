@@ -1,9 +1,7 @@
-/**
- * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql2/promise").Pool} database 
- */
-module.exports.run = async (request, database) => {
+import { Pool, ResultSetHeader } from "mysql2/promise";
+import { Request } from "raraph84-lib";
 
+export const run = async (request: Request, database: Pool) => {
     if (!request.jsonBody) {
         request.end(400, "Invalid JSON");
         return;
@@ -61,7 +59,18 @@ module.exports.run = async (request, database) => {
 
     let pageId;
     try {
-        pageId = (await database.query("INSERT INTO pages (short_name, title, url, logo_url, domain) VALUES (?, ?, ?, ?, ?)", [request.jsonBody.shortName, request.jsonBody.title, request.jsonBody.url, request.jsonBody.logoUrl, request.jsonBody.domain]))[0].insertId;
+        pageId = (
+            await database.query<ResultSetHeader>(
+                "INSERT INTO pages (short_name, title, url, logo_url, domain) VALUES (?, ?, ?, ?, ?)",
+                [
+                    request.jsonBody.shortName,
+                    request.jsonBody.title,
+                    request.jsonBody.url,
+                    request.jsonBody.logoUrl,
+                    request.jsonBody.domain
+                ]
+            )
+        )[0].insertId;
     } catch (error) {
         request.end(500, "Internal server error");
         console.log(`SQL Error - ${__filename} - ${error}`);
@@ -69,10 +78,10 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(200, { id: pageId });
-}
+};
 
-module.exports.infos = {
+export const infos = {
     path: "/pages",
     method: "POST",
     requiresAuth: true
-}
+};

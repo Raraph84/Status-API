@@ -1,16 +1,13 @@
-const { getPages } = require("../../resources");
+import { Pool } from "mysql2/promise";
+import { Request } from "raraph84-lib";
+import { getPages } from "../../resources";
 
-/**
- * @param {import("raraph84-lib/src/Request")} request 
- * @param {import("mysql2/promise").Pool} database 
- */
-module.exports.run = async (request, database) => {
-
+export const run = async (request: Request, database: Pool) => {
     const includes = request.searchParams.get("includes")?.toLowerCase().split(",") || [];
 
     let page;
     try {
-        page = await getPages(database, request.metadata.authenticated ? [request.urlParams.pageId] : null, [request.urlParams.pageId], [request.urlParams.pageId], includes);
+        page = await getPages(database, request.metadata.authenticated ? [parseInt(request.urlParams.pageId) || 0] : null, [request.urlParams.pageId], [request.urlParams.pageId], includes);
     } catch (error) {
         request.end(500, "Internal server error");
         return;
@@ -22,10 +19,10 @@ module.exports.run = async (request, database) => {
     }
 
     request.end(200, page[request.metadata.authenticated ? 0 : 1][0]);
-}
+};
 
-module.exports.infos = {
+export const infos = {
     path: "/pages/:pageId",
     method: "GET",
     requiresAuth: false
-}
+};
