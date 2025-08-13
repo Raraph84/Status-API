@@ -3,8 +3,6 @@ import { Pool, RowDataPacket } from "mysql2/promise";
 import { getServices } from "../../resources";
 const config = getConfig(__dirname + "/../../..");
 
-const smokepingStartDay = Math.floor(new Date(2025, 5 - 1, 13, 2).getTime() / 1000 / 60 / 60 / 24);
-
 export const run = async (request: Request, database: Pool) => {
     let service;
     try {
@@ -22,78 +20,78 @@ export const run = async (request: Request, database: Pool) => {
     const endDay = Math.floor(Date.now() / 1000 / 60 / 60 / 24) + 1;
     const startDay = endDay - 30 * 3;
 
-    const getOldUptimes = async () => {
-        let statuses;
-        try {
-            [statuses] = await database.query<RowDataPacket[]>(
-                "SELECT * FROM services_daily_statuses WHERE service_id=? AND day>=?",
-                [service.id, startDay]
-            );
-        } catch (error) {
-            console.log(`SQL Error - ${__filename} - ${error}`);
-            throw error;
-        }
-
-        const getTodayUptime = async () => {
-            const day = endDay - 1;
-
+    if (service.type !== "server") {
+        const getOldUptimes = async () => {
             let statuses;
             try {
                 [statuses] = await database.query<RowDataPacket[]>(
-                    "SELECT * FROM services_statuses WHERE service_id=? AND minute>=?",
-                    [service.id, day * 24 * 60]
+                    "SELECT * FROM services_daily_statuses WHERE service_id=? AND day>=?",
+                    [service.id, startDay]
                 );
             } catch (error) {
                 console.log(`SQL Error - ${__filename} - ${error}`);
                 throw error;
             }
 
+            const getTodayUptime = async () => {
+                const day = endDay - 1;
+
+                let statuses;
+                try {
+                    [statuses] = await database.query<RowDataPacket[]>(
+                        "SELECT * FROM services_statuses WHERE service_id=? AND minute>=?",
+                        [service.id, day * 24 * 60]
+                    );
+                } catch (error) {
+                    console.log(`SQL Error - ${__filename} - ${error}`);
+                    throw error;
+                }
+
+                const checkers = orderDataByChecker(statuses);
+
+                let checks = 0;
+                let ups = 0;
+                const minutes = new Set();
+                for (const checker of checkers) {
+                    for (const status of checker.data) {
+                        if (minutes.has(status.minute)) continue;
+                        checks += 1;
+                        if (status.online) ups += 1;
+                        minutes.add(status.minute);
+                    }
+                }
+
+                const uptime = checks > 0 ? Math.round((ups / checks) * 100 * 1000) / 1000 : null;
+
+                return { day, uptime };
+            };
+
             const checkers = orderDataByChecker(statuses);
 
-            let checks = 0;
-            let ups = 0;
-            const minutes = new Set();
-            for (const checker of checkers) {
-                for (const status of checker.data) {
-                    if (minutes.has(status.minute)) continue;
-                    checks += 1;
-                    if (status.online) ups += 1;
-                    minutes.add(status.minute);
+            const uptimes = [];
+            for (let day = startDay; day < endDay - 1; day++) {
+                for (const checker of checkers) {
+                    const status = checker.data.find((status) => status.day === day);
+                    if (!status || status.uptime === null) continue;
+                    uptimes.push({ day, uptime: status.uptime });
+                    break;
                 }
+                if (!uptimes.find((uptime) => uptime.day === day)) uptimes.push({ day, uptime: null });
             }
 
-            const uptime = checks > 0 ? Math.round((ups / checks) * 100 * 1000) / 1000 : null;
+            uptimes.push((await getTodayUptime()) as RowDataPacket);
 
-            return { day, uptime };
+            return uptimes;
         };
 
-        const checkers = orderDataByChecker(statuses);
-
-        const uptimes = [];
-        for (let day = startDay; day < endDay - 1; day++) {
-            for (const checker of checkers) {
-                const status = checker.data.find((status) => status.day === day);
-                if (!status || status.uptime === null) continue;
-                uptimes.push({ day, uptime: status.uptime });
-                break;
-            }
-            if (!uptimes.find((uptime) => uptime.day === day)) uptimes.push({ day, uptime: null });
+        let oldUptimes;
+        try {
+            oldUptimes = await getOldUptimes();
+        } catch (error) {
+            request.end(500, "Internal server error");
+            return;
         }
 
-        uptimes.push((await getTodayUptime()) as RowDataPacket);
-
-        return uptimes;
-    };
-
-    let oldUptimes;
-    try {
-        oldUptimes = await getOldUptimes();
-    } catch (error) {
-        request.end(500, "Internal server error");
-        return;
-    }
-
-    if (service.type !== "server") {
         request.end(200, { uptimes: oldUptimes });
         return;
     }
@@ -114,11 +112,6 @@ export const run = async (request: Request, database: Pool) => {
 
     const uptimes = [];
     for (let day = startDay; day < endDay; day++) {
-        if (day < smokepingStartDay) {
-            uptimes.push(oldUptimes.find((uptime) => uptime.day === day));
-            continue;
-        }
-
         const startTime = day * 24 * 60 * 6;
         const endTime = (day + 1) * 24 * 60 * 6;
 
