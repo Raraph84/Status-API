@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost
--- Généré le : jeu. 03 juil. 2025 à 08:56
--- Version du serveur : 10.11.11-MariaDB-0+deb12u1
+-- Généré le : jeu. 23 oct. 2025 à 08:24
+-- Version du serveur : 10.11.14-MariaDB-0+deb12u2
 -- Version de PHP : 8.2.28
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -252,7 +252,8 @@ ALTER TABLE `services_events`
 -- Index pour la table `services_smokeping`
 --
 ALTER TABLE `services_smokeping`
-  ADD PRIMARY KEY (`service_id`,`checker_id`,`start_time`,`duration`);
+  ADD PRIMARY KEY (`service_id`,`checker_id`,`start_time`,`duration`),
+  ADD KEY `checker_id` (`checker_id`);
 
 --
 -- Index pour la table `services_statuses`
