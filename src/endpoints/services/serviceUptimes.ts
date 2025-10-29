@@ -100,7 +100,7 @@ export const run = async (request: Request, database: Pool) => {
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
             "SELECT checker_id, start_time, duration, checks, downs FROM services_smokeping WHERE service_id=? AND start_time>=?",
-            [service.id, startDay * 24 * 60 * 6, config.checkerPriorityId]
+            [service.id, startDay * 24 * 60 * 6]
         );
     } catch (error) {
         request.end(500, "Internal server error");
