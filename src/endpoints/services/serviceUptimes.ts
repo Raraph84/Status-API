@@ -125,7 +125,7 @@ export const run = async (request: Request, database: Pool) => {
         for (const time in days[day]) {
             const pings = days[day][time];
             const cchecks = pings.reduce((acc, ping) => acc + ping.checks, 0) / pings.length;
-            if (pings.filter((ping) => ping.downs).length > 1)
+            if (pings.filter((ping) => ping.downs).length / pings.length > 0.2)
                 ups += cchecks - pings.reduce((acc, ping) => acc + ping.downs, 0) / pings.length;
             else ups += cchecks;
             checks += cchecks;
