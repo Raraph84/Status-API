@@ -108,32 +108,31 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const checkers = orderDataByChecker(smokeping);
+    const days: { [key: number]: { [key: number]: any[] } } = {};
+    for (let day = startDay; day < endDay; day++) days[day] = {};
+    for (const ping of smokeping) {
+        const day = days[Math.floor(ping.start_time / (24 * 60 * 6))];
+        if (!day) continue;
+        if (day[ping.start_time]) day[ping.start_time].push(ping);
+        else day[ping.start_time] = [ping];
+    }
 
-    const uptimes = [];
-    for (let day = startDay; day < endDay; day++) {
-        const startTime = day * 24 * 60 * 6;
-        const endTime = (day + 1) * 24 * 60 * 6;
-
+    const uptimes: { day: number; uptime: number | null }[] = [];
+    for (const day in days) {
         let checks = 0;
         let ups = 0;
-        const times = new Set();
-        for (const checker of checkers) {
-            while (checker.next < checker.data.length && checker.data[checker.next].start_time < endTime) {
-                const ping = checker.data[checker.next++];
-                if (ping.start_time < startTime) continue;
 
-                for (let i = 0; i < ping.duration; i++) {
-                    if (times.has(ping.start_time + i)) continue;
-                    checks++;
-                    if (i / ping.duration >= (ping.downs ?? 0) / ping.checks) ups++;
-                    times.add(ping.start_time + i);
-                }
-            }
+        for (const time in days[day]) {
+            const pings = days[day][time];
+            const cchecks = pings.reduce((acc, ping) => acc + ping.checks, 0) / pings.length;
+            if (pings.filter((ping) => ping.downs).length > 1)
+                ups += cchecks - pings.reduce((acc, ping) => acc + ping.downs, 0) / pings.length;
+            else ups += cchecks;
+            checks += cchecks;
         }
 
         const uptime = checks > 0 ? Math.round((ups / checks) * 100 * 1000) / 1000 : null;
-        uptimes.push({ day, uptime });
+        uptimes.push({ day: parseInt(day), uptime });
     }
 
     request.end(200, { uptimes });
