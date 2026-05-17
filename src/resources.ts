@@ -1,5 +1,4 @@
 import { Pool, RowDataPacket } from "mysql2/promise";
-import { orderDataByChecker } from "./endpoints/services/serviceUptimes";
 
 export const getServices = async (
     database: Pool,
@@ -66,33 +65,29 @@ export const getOldServicesStates = async (
     const minute = Math.floor(Date.now() / 1000 / 60) - 24 * 60 * 60;
 
     let subsql = "SELECT service_id, checker_id, MAX(minute) AS minute";
-    subsql += " FROM services_events";
+    subsql += " FROM services_statuses";
     subsql += " WHERE service_id IN (?) AND minute>?";
     subsql += " GROUP BY service_id, checker_id";
 
-    let sql = "SELECT services_events.*";
-    sql += " FROM services_events";
+    let sql = "SELECT services_statuses.*";
+    sql += " FROM services_statuses";
     sql += " JOIN (" + subsql + ") latest";
-    sql += " ON services_events.checker_id=latest.checker_id AND services_events.service_id=latest.service_id";
-    sql += " AND services_events.minute=latest.minute";
+    sql += " ON services_statuses.checker_id=latest.checker_id AND services_statuses.service_id=latest.service_id";
+    sql += " AND services_statuses.minute=latest.minute";
 
-    let lastEvents;
+    let statuses;
     try {
-        [lastEvents] = await database.query<RowDataPacket[]>(sql, [serviceId, minute]);
+        [statuses] = await database.query<RowDataPacket[]>(sql, [serviceId, minute]);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
     }
 
-    const checkers = orderDataByChecker(lastEvents);
     const results: { service: number; online: boolean }[] = [];
     for (const service of serviceId) {
-        for (const checker of checkers) {
-            const status = checker.data.find((status) => status.service_id === service);
-            if (!status) continue;
-            results.push({ service, online: !!status.online });
-            break;
-        }
+        const serviceStatuses = statuses.filter((status) => status.service_id === service);
+        const downs = serviceStatuses.filter((status) => !status.online).length;
+        results.push({ service, online: downs / serviceStatuses.length <= 0.2 });
     }
     return results;
 };
@@ -114,23 +109,19 @@ export const getServicesStates = async (
     sql += " ON services_smokeping.checker_id=latest.checker_id AND services_smokeping.service_id=latest.service_id";
     sql += " AND services_smokeping.start_time=latest.start_time";
 
-    let lastPings;
+    let pings;
     try {
-        [lastPings] = await database.query<RowDataPacket[]>(sql, [serviceId, startTime]);
+        [pings] = await database.query<RowDataPacket[]>(sql, [serviceId, startTime]);
     } catch (error) {
         console.log(`SQL Error - ${__filename} - ${error}`);
         throw new Error("Database error");
     }
 
-    const checkers = orderDataByChecker(lastPings);
     const results: { service: number; online: boolean }[] = [];
     for (const service of serviceId) {
-        for (const checker of checkers) {
-            const ping = checker.data.find((ping) => ping.service_id === service);
-            if (!ping) continue;
-            results.push({ service, online: !ping.downs });
-            break;
-        }
+        const servicePings = pings.filter((ping) => ping.service_id === service);
+        const downs = servicePings.filter((ping) => ping.downs).length;
+        results.push({ service, online: downs / servicePings.length <= 0.2 });
     }
     return results;
 };
