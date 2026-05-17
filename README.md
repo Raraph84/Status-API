@@ -23,10 +23,8 @@ npm run build
 
 Create a database on your MySQL server, create a MySQL user with edit access to the database, and import `Status-API/database.sql` into your freshly created database
 
-Edit the `Status-API/config.json` to match your database host, username and database name, and update the checker priority ids that will affect from what checker the data served to the website is coming from
-
-Copy the `Status-API/.env.example` to `Status-API/.env` and fill it with your database password, and a randomly generated token that will be used by the admin panel to authenticate  
-/!\The PANEL_KEY value should be set or anyone will be able to edit your config
+Copy the `Status-API/.env.example` to `Status-API/.env` and fill it with your database credentials, and a randomly generated token that will be used by the admin panel to authenticate  
+/!\ The PANEL_KEY value should be set or anyone will be able to edit your config
 
 Then start the API by running:
 

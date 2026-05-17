@@ -1,8 +1,3 @@
 {
-    "database": {
-        "host": "172.17.0.1",
-        "user": "status_api",
-        "database": "status"
-    },
     "checkerPriorityId": [2, 11, 7, 4, 3]
 }

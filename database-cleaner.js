@@ -1,15 +1,15 @@
 const { createPool } = require("mysql2/promise");
-const { getConfig } = require("raraph84-lib");
 const dotenv = require("dotenv");
-const config = getConfig(__dirname);
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
 (async () => {
     const database = createPool({
+        host: process.env.DATABASE_HOST,
+        user: process.env.DATABASE_USER,
         password: process.env.DATABASE_PASSWORD,
-        charset: "utf8mb4_general_ci",
-        ...config.database
+        database: process.env.DATABASE_NAME,
+        charset: "utf8mb4_general_ci"
     });
 
     console.log("Connecting to the database...");

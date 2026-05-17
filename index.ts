@@ -1,19 +1,19 @@
 import { createPool } from "mysql2/promise";
-import { filterEndpointsByPath, getConfig, HttpServer, TaskManager } from "raraph84-lib";
+import { filterEndpointsByPath, HttpServer, TaskManager } from "raraph84-lib";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
-
-const config = getConfig(__dirname);
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
 const tasks = new TaskManager();
 
 const database = createPool({
+    host: process.env.DATABASE_HOST,
+    user: process.env.DATABASE_USER,
     password: process.env.DATABASE_PASSWORD,
-    charset: "utf8mb4_general_ci",
-    ...config.database
+    database: process.env.DATABASE_NAME,
+    charset: "utf8mb4_general_ci"
 });
 tasks.addTask(
     (resolve, reject) => {
