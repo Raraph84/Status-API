@@ -23,8 +23,10 @@ dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
     const sqls = [];
 
-    const [services] = await database.query("SELECT * FROM services");
+    const [checkers] = await database.query("SELECT * FROM checkers");
+    const [groups] = await database.query("SELECT * FROM groups");
     const [pages] = await database.query("SELECT * FROM pages");
+    const [services] = await database.query("SELECT * FROM services");
 
     console.log("Cleaning services daily statuses...");
     const [servicesDailyStatuses] = await database.query("SELECT DISTINCT service_id FROM services_daily_statuses");
@@ -88,6 +90,36 @@ dotenv.config({ path: [".env.local", ".env"], quiet: true });
             console.log(`Page ${pagesSubpage.page_id} or subpage ${pagesSubpage.subpage_id} not found, deleting...`);
             sqls.push(
                 `DELETE FROM Pages_Subpages WHERE page_id = ${pagesSubpage.page_id} && subpage_id = ${pagesSubpage.subpage_id};`
+            );
+        }
+    }
+
+    console.log("Cleaning groups checkers...");
+    const [groupsCheckers] = await database.query("SELECT * FROM groups_checkers");
+    for (const groupsChecker of groupsCheckers) {
+        const group = groups.find((group) => group.group_id === groupsChecker.group_id);
+        const checker = checkers.find((checker) => checker.checker_id === groupsChecker.checker_id);
+        if (!group || !checker) {
+            console.log(
+                `Group ${groupsChecker.group_id} or checker ${groupsChecker.checker_id} not found, deleting...`
+            );
+            sqls.push(
+                `DELETE FROM groups_checkers WHERE group_id = ${groupsChecker.group_id} && checker_id = ${groupsChecker.checker_id};`
+            );
+        }
+    }
+
+    console.log("Cleaning groups services...");
+    const [groupsServices] = await database.query("SELECT * FROM groups_services");
+    for (const groupsService of groupsServices) {
+        const group = groups.find((group) => group.group_id === groupsService.group_id);
+        const service = services.find((service) => service.service_id === groupsService.service_id);
+        if (!group || !service) {
+            console.log(
+                `Group ${groupsService.group_id} or service ${groupsService.service_id} not found, deleting...`
+            );
+            sqls.push(
+                `DELETE FROM groups_services WHERE group_id = ${groupsService.group_id} && service_id = ${groupsService.service_id};`
             );
         }
     }
