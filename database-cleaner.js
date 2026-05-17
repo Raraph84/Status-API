@@ -29,42 +29,78 @@ dotenv.config({ path: [".env.local", ".env"], quiet: true });
     const [services] = await database.query("SELECT * FROM services");
 
     console.log("Cleaning services daily statuses...");
-    const [servicesDailyStatuses] = await database.query("SELECT DISTINCT service_id FROM services_daily_statuses");
-    for (const servicesDailyStatus of servicesDailyStatuses) {
+    const [servicesDailyStatusesServices] = await database.query(
+        "SELECT DISTINCT service_id FROM services_daily_statuses"
+    );
+    const [servicesDailyStatusesCheckers] = await database.query(
+        "SELECT DISTINCT checker_id FROM services_daily_statuses"
+    );
+    for (const servicesDailyStatus of servicesDailyStatusesServices) {
         const service = services.find((service) => service.service_id === servicesDailyStatus.service_id);
         if (!service) {
             console.log(`Service ${servicesDailyStatus.service_id} not found in services table, deleting...`);
             sqls.push(`DELETE FROM services_daily_statuses WHERE service_id = ${servicesDailyStatus.service_id};`);
         }
     }
+    for (const servicesDailyStatus of servicesDailyStatusesCheckers) {
+        const checker = checkers.find((checker) => checker.checker_id === servicesDailyStatus.checker_id);
+        if (!checker) {
+            console.log(`Checker ${servicesDailyStatus.checker_id} not found in checkers table, deleting...`);
+            sqls.push(`DELETE FROM services_daily_statuses WHERE checker_id = ${servicesDailyStatus.checker_id};`);
+        }
+    }
 
     console.log("Cleaning services events...");
-    const [servicesEvents] = await database.query("SELECT DISTINCT service_id FROM services_events");
-    for (const servicesEvent of servicesEvents) {
+    const [servicesEventsServices] = await database.query("SELECT DISTINCT service_id FROM services_events");
+    const [servicesEventsCheckers] = await database.query("SELECT DISTINCT checker_id FROM services_events");
+    for (const servicesEvent of servicesEventsServices) {
         const service = services.find((service) => service.service_id === servicesEvent.service_id);
         if (!service) {
             console.log(`Service ${servicesEvent.service_id} not found in services table, deleting...`);
             sqls.push(`DELETE FROM services_events WHERE service_id = ${servicesEvent.service_id};`);
         }
     }
+    for (const servicesEvent of servicesEventsCheckers) {
+        const checker = checkers.find((checker) => checker.checker_id === servicesEvent.checker_id);
+        if (!checker) {
+            console.log(`Checker ${servicesEvent.checker_id} not found in checkers table, deleting...`);
+            sqls.push(`DELETE FROM services_events WHERE checker_id = ${servicesEvent.checker_id};`);
+        }
+    }
 
     console.log("Cleaning services statuses...");
-    const [servicesStatuses] = await database.query("SELECT DISTINCT service_id FROM services_statuses");
-    for (const servicesStatus of servicesStatuses) {
+    const [servicesStatusesServices] = await database.query("SELECT DISTINCT service_id FROM services_statuses");
+    const [servicesStatusesCheckers] = await database.query("SELECT DISTINCT checker_id FROM services_statuses");
+    for (const servicesStatus of servicesStatusesServices) {
         const service = services.find((service) => service.service_id === servicesStatus.service_id);
         if (!service) {
             console.log(`Service ${servicesStatus.service_id} not found in services table, deleting...`);
             sqls.push(`DELETE FROM services_statuses WHERE service_id = ${servicesStatus.service_id};`);
         }
     }
+    for (const servicesStatus of servicesStatusesCheckers) {
+        const checker = checkers.find((checker) => checker.checker_id === servicesStatus.checker_id);
+        if (!checker) {
+            console.log(`Checker ${servicesStatus.checker_id} not found in checkers table, deleting...`);
+            sqls.push(`DELETE FROM services_statuses WHERE checker_id = ${servicesStatus.checker_id};`);
+        }
+    }
 
     console.log("Cleaning services smokeping...");
-    const [servicesSmokeping] = await database.query("SELECT DISTINCT service_id FROM services_smokeping");
-    for (const serviceSmokeping of servicesSmokeping) {
+    const [servicesSmokepingServices] = await database.query("SELECT DISTINCT service_id FROM services_smokeping");
+    const [servicesSmokepingCheckers] = await database.query("SELECT DISTINCT checker_id FROM services_smokeping");
+    for (const serviceSmokeping of servicesSmokepingServices) {
         const service = services.find((service) => service.service_id === serviceSmokeping.service_id);
         if (!service) {
             console.log(`Service ${serviceSmokeping.service_id} not found in services table, deleting...`);
             sqls.push(`DELETE FROM services_smokeping WHERE service_id = ${serviceSmokeping.service_id};`);
+        }
+    }
+    for (const serviceSmokeping of servicesSmokepingCheckers) {
+        const checker = checkers.find((checker) => checker.checker_id === serviceSmokeping.checker_id);
+        if (!checker) {
+            console.log(`Checker ${serviceSmokeping.checker_id} not found in checkers table, deleting...`);
+            sqls.push(`DELETE FROM services_smokeping WHERE checker_id = ${serviceSmokeping.checker_id};`);
         }
     }
 
