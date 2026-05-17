@@ -1,11 +1,12 @@
 import { createPool } from "mysql2/promise";
 import { filterEndpointsByPath, getConfig, HttpServer, TaskManager } from "raraph84-lib";
+import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 
 const config = getConfig(__dirname);
 
-require("dotenv").config({ path: [".env.local", ".env"] });
+dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
 const tasks = new TaskManager();
 
