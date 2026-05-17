@@ -1,5 +1,5 @@
-import { getConfig, Request } from "raraph84-lib";
-import { Pool, RowDataPacket } from "mysql2/promise";
+import type { Pool, RowDataPacket } from "mysql2/promise";
+import { getConfig, type Request } from "raraph84-lib";
 import { getServices } from "../../resources";
 const config = getConfig(__dirname + "/../../..");
 
@@ -108,22 +108,19 @@ export const run = async (request: Request, database: Pool) => {
         return;
     }
 
-    const days: { [key: number]: { [key: number]: any[] } } = {};
-    for (let day = startDay; day < endDay; day++) days[day] = {};
+    const days: Map<number, Map<number, any[]>> = new Map();
+    for (let day = startDay; day < endDay; day++) days.set(day, new Map());
     for (const ping of smokeping) {
-        const day = days[Math.floor(ping.start_time / (24 * 60 * 6))];
-        if (!day) continue;
-        if (day[ping.start_time]) day[ping.start_time].push(ping);
-        else day[ping.start_time] = [ping];
+        const day = days.get(Math.floor(ping.start_time / (24 * 60 * 6)));
+        if (!day?.get(ping.start_time)?.push(ping)) day?.set(ping.start_time, [ping]);
     }
 
     const uptimes: { day: number; uptime: number | null }[] = [];
-    for (const day in days) {
+    for (const [day, dayPings] of days.entries()) {
         let checks = 0;
         let ups = 0;
 
-        for (const time in days[day]) {
-            const pings = days[day][time];
+        for (const pings of dayPings.values()) {
             const cchecks = pings.reduce((acc, ping) => acc + ping.checks, 0) / pings.length;
             if (pings.filter((ping) => ping.downs).length / pings.length > 0.2)
                 ups += cchecks - pings.reduce((acc, ping) => acc + ping.downs, 0) / pings.length;
@@ -132,7 +129,7 @@ export const run = async (request: Request, database: Pool) => {
         }
 
         const uptime = checks > 0 ? Math.round((ups / checks) * 100 * 1000) / 1000 : null;
-        uptimes.push({ day: parseInt(day), uptime });
+        uptimes.push({ day, uptime });
     }
 
     request.end(200, { uptimes });

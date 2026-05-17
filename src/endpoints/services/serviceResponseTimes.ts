@@ -1,8 +1,7 @@
-import { getConfig, Request } from "raraph84-lib";
-import { Pool, RowDataPacket } from "mysql2/promise";
+import type { Pool, RowDataPacket } from "mysql2/promise";
+import type { Request } from "raraph84-lib";
 import { getServices } from "../../resources";
 import { orderDataByChecker } from "./serviceUptimes";
-const config = getConfig(__dirname + "/../../..");
 
 export const run = async (request: Request, database: Pool) => {
     let service;
