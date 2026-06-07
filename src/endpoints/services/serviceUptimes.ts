@@ -99,7 +99,7 @@ export const run = async (request: Request, database: Pool) => {
     let smokeping;
     try {
         [smokeping] = await database.query<RowDataPacket[]>(
-            "SELECT checker_id, start_time, duration, checks, downs FROM services_smokeping WHERE service_id=? AND start_time>=?",
+            "SELECT start_time, duration, checks, downs FROM services_smokeping WHERE service_id=? AND start_time>=?",
             [service.id, startDay * 24 * 60 * 6]
         );
     } catch (error) {
@@ -115,21 +115,24 @@ export const run = async (request: Request, database: Pool) => {
         if (!day?.get(ping.start_time)?.push(ping)) day?.set(ping.start_time, [ping]);
     }
 
-    const uptimes: { day: number; uptime: number | null }[] = [];
+    const uptimes: { day: number; uptime: number | null; downtime: number | null }[] = [];
     for (const [day, dayPings] of days.entries()) {
         let checks = 0;
         let ups = 0;
+        let down = 0;
 
         for (const pings of dayPings.values()) {
             const cchecks = pings.reduce((acc, ping) => acc + ping.checks, 0) / pings.length;
-            if (pings.filter((ping) => ping.downs).length / pings.length > 0.2)
+            if (pings.filter((ping) => ping.downs).length / pings.length > 0.2) {
                 ups += cchecks - pings.reduce((acc, ping) => acc + ping.downs, 0) / pings.length;
-            else ups += cchecks;
+                down += pings.reduce((acc, ping) => acc + (ping.duration / ping.checks) * ping.downs, 0) / pings.length;
+            } else ups += cchecks;
             checks += cchecks;
         }
 
         const uptime = checks > 0 ? Math.round((ups / checks) * 100 * 1000) / 1000 : null;
-        uptimes.push({ day, uptime });
+        const downtime = checks > 0 ? Math.round(down * 10 * 1000) : null;
+        uptimes.push({ day, uptime, downtime });
     }
 
     request.end(200, { uptimes });
