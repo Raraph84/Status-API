@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.2
+-- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
--- Hôte : localhost
--- Généré le : jeu. 23 oct. 2025 à 08:24
--- Version du serveur : 10.11.14-MariaDB-0+deb12u2
--- Version de PHP : 8.2.28
+-- Host: localhost
+-- Generation Time: Oct 11, 2026 at 02:38 PM
+-- Server version: 11.8.6-MariaDB-0+deb13u1 from Debian
+-- PHP Version: 8.3.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de données : `status`
+-- Database: `status`
 --
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `checkers`
+-- Table structure for table `checkers`
 --
 
 CREATE TABLE `checkers` (
@@ -38,7 +38,7 @@ CREATE TABLE `checkers` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `groups`
+-- Table structure for table `groups`
 --
 
 CREATE TABLE `groups` (
@@ -49,7 +49,7 @@ CREATE TABLE `groups` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `groups_checkers`
+-- Table structure for table `groups_checkers`
 --
 
 CREATE TABLE `groups_checkers` (
@@ -60,7 +60,7 @@ CREATE TABLE `groups_checkers` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `groups_services`
+-- Table structure for table `groups_services`
 --
 
 CREATE TABLE `groups_services` (
@@ -71,7 +71,7 @@ CREATE TABLE `groups_services` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `pages`
+-- Table structure for table `pages`
 --
 
 CREATE TABLE `pages` (
@@ -86,7 +86,7 @@ CREATE TABLE `pages` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `pages_services`
+-- Table structure for table `pages_services`
 --
 
 CREATE TABLE `pages_services` (
@@ -99,7 +99,7 @@ CREATE TABLE `pages_services` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `pages_subpages`
+-- Table structure for table `pages_subpages`
 --
 
 CREATE TABLE `pages_subpages` (
@@ -110,7 +110,7 @@ CREATE TABLE `pages_subpages` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `services`
+-- Table structure for table `services`
 --
 
 CREATE TABLE `services` (
@@ -126,7 +126,7 @@ CREATE TABLE `services` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `services_daily_statuses`
+-- Table structure for table `services_daily_statuses`
 --
 
 CREATE TABLE `services_daily_statuses` (
@@ -141,7 +141,7 @@ CREATE TABLE `services_daily_statuses` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `services_events`
+-- Table structure for table `services_events`
 --
 
 CREATE TABLE `services_events` (
@@ -154,7 +154,7 @@ CREATE TABLE `services_events` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `services_smokeping`
+-- Table structure for table `services_smokeping`
 --
 
 CREATE TABLE `services_smokeping` (
@@ -168,12 +168,14 @@ CREATE TABLE `services_smokeping` (
   `min_response_time` mediumint(8) UNSIGNED DEFAULT NULL,
   `max_response_time` mediumint(8) UNSIGNED DEFAULT NULL,
   `lost` smallint(5) UNSIGNED DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+PARTITION BY KEY (`checker_id`,`service_id`)
+PARTITIONS 128;
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `services_statuses`
+-- Table structure for table `services_statuses`
 --
 
 CREATE TABLE `services_statuses` (
@@ -185,106 +187,106 @@ CREATE TABLE `services_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Index pour les tables déchargées
+-- Indexes for dumped tables
 --
 
 --
--- Index pour la table `checkers`
+-- Indexes for table `checkers`
 --
 ALTER TABLE `checkers`
   ADD PRIMARY KEY (`checker_id`);
 
 --
--- Index pour la table `groups`
+-- Indexes for table `groups`
 --
 ALTER TABLE `groups`
   ADD PRIMARY KEY (`group_id`);
 
 --
--- Index pour la table `groups_checkers`
+-- Indexes for table `groups_checkers`
 --
 ALTER TABLE `groups_checkers`
   ADD PRIMARY KEY (`group_id`,`checker_id`);
 
 --
--- Index pour la table `groups_services`
+-- Indexes for table `groups_services`
 --
 ALTER TABLE `groups_services`
   ADD PRIMARY KEY (`group_id`,`service_id`);
 
 --
--- Index pour la table `pages`
+-- Indexes for table `pages`
 --
 ALTER TABLE `pages`
   ADD PRIMARY KEY (`page_id`);
 
 --
--- Index pour la table `pages_services`
+-- Indexes for table `pages_services`
 --
 ALTER TABLE `pages_services`
   ADD PRIMARY KEY (`page_id`,`service_id`);
 
 --
--- Index pour la table `pages_subpages`
+-- Indexes for table `pages_subpages`
 --
 ALTER TABLE `pages_subpages`
   ADD PRIMARY KEY (`page_id`,`subpage_id`);
 
 --
--- Index pour la table `services`
+-- Indexes for table `services`
 --
 ALTER TABLE `services`
   ADD PRIMARY KEY (`service_id`);
 
 --
--- Index pour la table `services_daily_statuses`
+-- Indexes for table `services_daily_statuses`
 --
 ALTER TABLE `services_daily_statuses`
   ADD PRIMARY KEY (`service_id`,`checker_id`,`day`);
 
 --
--- Index pour la table `services_events`
+-- Indexes for table `services_events`
 --
 ALTER TABLE `services_events`
   ADD PRIMARY KEY (`service_id`,`checker_id`,`minute`);
 
 --
--- Index pour la table `services_smokeping`
+-- Indexes for table `services_smokeping`
 --
 ALTER TABLE `services_smokeping`
-  ADD PRIMARY KEY (`service_id`,`checker_id`,`start_time`,`duration`),
-  ADD KEY `checker_id` (`checker_id`);
+  ADD PRIMARY KEY (`start_time`,`checker_id`,`service_id`,`duration`),
+  ADD KEY `service_id` (`service_id`,`checker_id`,`start_time`,`duration`);
 
 --
--- Index pour la table `services_statuses`
+-- Indexes for table `services_statuses`
 --
 ALTER TABLE `services_statuses`
   ADD PRIMARY KEY (`service_id`,`checker_id`,`minute`);
 
 --
--- AUTO_INCREMENT pour les tables déchargées
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT pour la table `checkers`
+-- AUTO_INCREMENT for table `checkers`
 --
 ALTER TABLE `checkers`
   MODIFY `checker_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `groups`
+-- AUTO_INCREMENT for table `groups`
 --
 ALTER TABLE `groups`
   MODIFY `group_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `pages`
+-- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
   MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `services`
+-- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
   MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT;
